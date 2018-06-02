@@ -1,8 +1,9 @@
 #include "assembler.h"
+#include "array.h"
 
 #include <iostream>
 #include <fstream>
-#include <array>
+#include <list>
 
 using namespace std;
 
@@ -13,26 +14,19 @@ Assembler::Assembler(char* inputFileName){
 
 	ifstream inputStream(inputFileName, ios::in);
 	if(inputStream.is_open()){
+	
+		list<string> lines;
 
-		char** rows = new char*[100];
-
-		int num_rows = 0;
 		while(!inputStream.eof()){
-			rows[num_rows] = new char[100];
-			inputStream.getline(rows[num_rows++], 100);
+			string new_line;	
+			getline(inputStream, new_line);
+			lines.push_back(new_line);
 		}
-				
+
 		inputStream.close();
 
-		for(int i=0; i<num_rows; i++){
-			cout << rows[i]  << endl;
-		}
+		lines = new Array(&lines);
 
-		for(int i=0; i<num_rows; i++){
-			delete rows[i];
-		}
-
-		delete rows;
 	}else{
 		cout << "Nije otvoren ulazni stream" << endl;
 	}
@@ -40,4 +34,5 @@ Assembler::Assembler(char* inputFileName){
 
 Assembler::~Assembler(){
 //	cout << "Destruktor" << endl;
+    delete lines;
 }
