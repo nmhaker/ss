@@ -1,0 +1,2 @@
+# ss
+Sistemski softver - projekat
