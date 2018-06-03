@@ -5,20 +5,45 @@
  */
 
 #include <list>
+#include <string>
+#include <iostream>
 
 #include "../include/array.h"
+#include "../include/exception.h"
 
-Array::Array(std::list l){
-	size = l.size;
-	array = new char*[size];
+using namespace std;
 
-	for(std::list<string>::const_iterator it = l.begin(), int i=0; it!=l.end(); l++,i++){
-			array[i] = new char[(*it).size()];
-			array[i] = (*it).t
+Array::Array(list<string> *l){
+	size = l->size();
+	array = new string*[size];
+
+	int i = 0;
+	for(list<string>::const_iterator it = l->begin(); it!=l->end(); it++){
+		array[i] = new string;
+		*array[i] = (*it);
+		i++;
 	}
 }
 
-Array::~Array() {
-
+void Array::printArray() {
+	for(int i=0; i<size; i++){
+		cout << *array[i] << endl;
+	}
 }
 
+
+Array::~Array() {
+	for(int i=0; i<size; i++)
+		delete array[i];
+	delete array;
+}
+
+std::string Array::getLine(int number) {
+	if(number < 1 || number > size)
+			throw new Exception("array.cpp: 42: Array out of bounds, array starts at 1");
+	return *array[number-1];
+}
+
+int Array::getSize() {
+	return size;
+}

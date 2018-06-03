@@ -19,6 +19,7 @@
 enum Type{
 	Undefined,
 	Directive,
+	Section,
 	Instruction,
 	Condition,
 	Symbol,

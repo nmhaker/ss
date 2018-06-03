@@ -1,7 +1,6 @@
 
 #include <iostream>
 #include "../include/assembler.h" 
-#include "../string_toolkit/strtk.hpp"
 
 using namespace std;
 

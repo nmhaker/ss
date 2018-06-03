@@ -1,6 +1,8 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
+#include "../include/array.h"
+
 class Assembler{
 
 public:
@@ -10,6 +12,7 @@ public:
 private:
 	Array *lines;	 
 
+	void test();
 };
 
 #endif

@@ -23,7 +23,10 @@ public:
 	Array(std::list<std::string>*);
 	~Array();
 
+	std::string getLine(int number);
 	void printArray();
+	int getSize();
+	
 private:
 	std::string** array;
 	int size;
