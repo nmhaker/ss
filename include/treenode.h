@@ -24,7 +24,14 @@ enum Type{
 	Condition,
 	Symbol,
 	Forbidden,
-	Expression
+	Expression,
+	Immediate,
+	Memdir,
+	Pcrel,
+	Address,
+	Memdir_imm,
+	Regdir,
+	Regindpom
 };
 
 class TreeNode{

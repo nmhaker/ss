@@ -26,6 +26,8 @@ ParseTree::~ParseTree() {
 }
 
 void ParseTree::populateTree() {
+	
+	// ASSEMBLER DIRECTIVES
 	TreeNode* tn_dot = new TreeNode('.', Symbol);
 	TreeNode* tn_global_g = new TreeNode('g', Symbol);
 	TreeNode* tn_global_l = new TreeNode('l', Symbol);
@@ -108,8 +110,130 @@ void ParseTree::populateTree() {
 	tn_dot->addChild(tn_word_w);
 	tn_dot->addChild(tn_long_l);
 	tn_dot->addChild(tn_align_a);
-	tn_dot->addChild(tn_skip_p);
+	tn_dot->addChild(tn_skip_p);	
 	this->root.insert(std::pair<char, TreeNode*>(tn_dot->getSymbol(), tn_dot));
+	
+	TreeNode* tn_a = new TreeNode('a', Symbol);
+	TreeNode* tn_add_d = new TreeNode('d', Symbol);
+	TreeNode* tn_add_d1 = new TreeNode('d', Instruction, "add");
+	TreeNode* tn_and_n = new TreeNode('n', Symbol);
+	TreeNode* tn_and_d = new TreeNode('d', Instruction, "and");
+	TreeNode* tn_al_l = new TreeNode('l', Condition, "al");
+	tn_a->addChild(tn_add_d)->addChild(tn_and_n)->addChild(tn_al_l);
+	tn_add_d->addChild(tn_add_d1);
+	tn_and_n->addChild(tn_and_d);
+	this->root.insert(std::pair<char, TreeNode*>(tn_a->getSymbol(), tn_a));
+	
+	TreeNode* tn_s = new TreeNode('s', Symbol);
+	TreeNode* tn_sub_u = new TreeNode('u', Symbol);
+	TreeNode* tn_sub_b = new TreeNode('b', Instruction, "sub");
+	TreeNode* tn_s_h = new TreeNode('h', Symbol);
+	TreeNode* tn_shl_l = new TreeNode('l', Instruction, "shl");
+	TreeNode* tn_shr_r = new TreeNode('r', Instruction, "shr");
+	tn_s->addChild(tn_sub_u)->addChild(tn_s_h);
+	tn_sub_u->addChild(tn_sub_b);
+	tn_s_h->addChild(tn_shl_l)->addChild(tn_shr_r);
+	this->root.insert(std::pair<char, TreeNode*>(tn_s->getSymbol(), tn_s));
+	
+	TreeNode* tn_m = new TreeNode('m', Symbol);
+	TreeNode* tn_mul_u = new TreeNode('u', Symbol);
+	TreeNode* tn_mul_l = new TreeNode('l', Instruction, "mul");
+	TreeNode* tn_mov_o = new TreeNode('o', Symbol);
+	TreeNode* tn_mov_v = new TreeNode('v', Instruction, "mov");	
+	tn_m->addChild(tn_mul_u)->addChild(tn_mov_o);
+	tn_mul_u->addChild(tn_mul_l);
+	tn_mov_o->addChild(tn_mov_v);
+	this->root.insert(std::pair<char, TreeNode*>(tn_m->getSymbol(), tn_m));
+	
+	TreeNode* tn_d = new TreeNode('d', Symbol);
+	TreeNode* tn_div_i = new TreeNode('i', Symbol);
+	TreeNode* tn_div_v = new TreeNode('v', Instruction, "div");
+	tn_d->addChild(tn_div_i);
+	tn_div_i->addChild(tn_div_v);
+	this->root.insert(std::pair<char, TreeNode*>(tn_d->getSymbol(), tn_d));
+	
+	TreeNode* tn_c = new TreeNode('c', Symbol);
+	TreeNode* tn_cmp_m = new TreeNode('m', Symbol);
+	TreeNode* tn_cmp_p = new TreeNode('p', Instruction, "cmp");
+	TreeNode* tn_call_a = new TreeNode('a', Symbol);
+	TreeNode* tn_call_l = new TreeNode('l', Symbol);
+	TreeNode* tn_call_l1 = new TreeNode('l', Instruction, "call");
+	tn_c->addChild(tn_cmp_m)->addChild(tn_call_a);
+	tn_cmp_m->addChild(tn_cmp_p);
+	tn_call_a->addChild(tn_call_l);
+	tn_call_l->addChild(tn_call_l1);
+	this->root.insert(std::pair<char, TreeNode*>(tn_c->getSymbol(), tn_c));
+	
+	TreeNode* tn_o = new TreeNode('o', Symbol);
+	TreeNode* tn_or_r = new TreeNode('r', Instruction, "or");
+	tn_o->addChild(tn_or_r);
+	this->root.insert(std::pair<char, TreeNode*>(tn_o->getSymbol(), tn_o));
+	
+	TreeNode* tn_n = new TreeNode('n', Symbol);
+	TreeNode* tn_not_o = new TreeNode('o', Symbol);
+	TreeNode* tn_not_t = new TreeNode('t', Instruction, "not");
+	TreeNode* tn_ne_e = new TreeNode('e', Condition, "ne");
+	tn_n->addChild(tn_not_o)->addChild(tn_ne_e);
+	tn_not_o->addChild(tn_not_t);
+	this->root.insert(std::pair<char, TreeNode*>(tn_n->getSymbol(), tn_n));
+	
+	TreeNode* tn_t = new TreeNode('t', Symbol);
+	TreeNode* tn_test_e = new TreeNode('e', Symbol);
+	TreeNode* tn_test_s = new TreeNode('s', Symbol);
+	TreeNode* tn_test_t = new TreeNode('t', Instruction, "test");
+	tn_t->addChild(tn_test_e);
+	tn_test_e->addChild(tn_test_s);
+	tn_test_s->addChild(tn_test_t);
+	this->root.insert(std::pair<char, TreeNode*>(tn_t->getSymbol(), tn_t));
+	
+	TreeNode* tn_p = new TreeNode('p', Symbol);
+	TreeNode* tn_push_u = new TreeNode('u', Symbol);
+	TreeNode* tn_push_s = new TreeNode('s', Symbol);
+	TreeNode* tn_push_h = new TreeNode('h', Instruction, "push");
+	TreeNode* tn_pop_o = new TreeNode('o', Symbol);
+	TreeNode* tn_pop_p = new TreeNode('p', Instruction, "pop");
+	tn_p->addChild(tn_push_u)->addChild(tn_pop_o);
+	tn_push_u->addChild(tn_push_s);
+	tn_push_s->addChild(tn_push_h);
+	tn_pop_o->addChild(tn_pop_p);
+	this->root.insert(std::pair<char, TreeNode*>(tn_p->getSymbol(), tn_p));
+	
+	TreeNode* tn_i = new TreeNode('i', Symbol);
+	TreeNode* tn_iret_r = new TreeNode('r', Symbol);
+	TreeNode* tn_iret_e = new TreeNode('e', Symbol);
+	TreeNode* tn_iret_t = new TreeNode('t', Instruction, "iret");
+	tn_i->addChild(tn_iret_r);
+	tn_iret_r->addChild(tn_iret_e);
+	tn_iret_e->addChild(tn_iret_t);
+	this->root.insert(std::pair<char, TreeNode*>(tn_i->getSymbol(), tn_i));
+	
+	TreeNode* tn_r = new TreeNode('r', Symbol);
+	TreeNode* tn_ret_e = new TreeNode('e', Symbol);
+	TreeNode* tn_ret_t = new TreeNode('t', Instruction);
+	TreeNode* tn_r0_0 = new TreeNode('0', Regdir, "r0");
+	TreeNode* tn_r1_1 = new TreeNode('1', Regdir, "r1");
+	TreeNode* tn_r2_2 = new TreeNode('2', Regdir, "r2");
+	TreeNode* tn_r3_3 = new TreeNode('3', Regdir, "r3");
+	TreeNode* tn_r4_4 = new TreeNode('4', Regdir, "r4");
+	TreeNode* tn_r5_5 = new TreeNode('5', Regdir, "r5");
+	TreeNode* tn_r6_6 = new TreeNode('6', Regdir, "r6");
+	TreeNode* tn_r7_7 = new TreeNode('7', Regdir, "r7");
+	tn_r->addChild(tn_ret_e)->addChild(tn_r0_0)->addChild(tn_r1_1)->addChild(tn_r2_2)->addChild(tn_r3_3)->addChild(tn_r4_4)->addChild(tn_r5_5)->addChild(tn_r6_6)->addChild(tn_r7_7);
+	tn_ret_e->addChild(tn_ret_t);
+	this->root.insert(std::pair<char, TreeNode*>(tn_r->getSymbol(), tn_r));
+	
+	TreeNode* tn_ampersand = new TreeNode('&', Address, "&");
+	TreeNode* tn_asterisk = new TreeNode('*', Memdir, "*");
+	TreeNode* tn_dollar = new TreeNode('$', Pcrel, "$");
+	this->root.insert(std::pair<char, TreeNode*>(tn_ampersand->getSymbol(), tn_ampersand));
+	this->root.insert(std::pair<char, TreeNode*>(tn_asterisk->getSymbol(), tn_asterisk));
+	this->root.insert(std::pair<char, TreeNode*>(tn_dollar->getSymbol(), tn_dollar));
+	
+	TreeNode* tn_0 = new TreeNode('0', Symbol);
+	TreeNode* tn_hex_x = new TreeNode('x', Symbol, "0x");
+	tn_0->addChild(tn_hex_x);
+	this->root.insert(std::pair<char, TreeNode*>(tn_0->getSymbol(), tn_0));
+	
 }
 
 bool ParseTree::parse(std::string line, int lineNumber) {
@@ -119,7 +243,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	string symbol;
 	for(unsigned i=0; i<line.size(); i++){
 		if(isspace(line[i]) && node == 0){
-//			cout << line[i];
+			cout << line[i] << flush;
 			continue;
 		}
 		try{
@@ -128,23 +252,23 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 			else
 				node = node->getChildren()->at(line[i]);
 			if(node->getValue() != "Undefined"){
-//				cout << node->getSymbol() << flush;
+				cout << node->getSymbol() << flush;
 				instruction.push_back(node->getValue());				
 				symbol.clear();
 				node = 0;
 			}
 			else{
-//				cout << node->getSymbol() << flush;
+				cout << node->getSymbol() << flush;
 				symbol+=node->getSymbol();
 			}
 		}catch(out_of_range e){
 			if(symbol.empty()){
 				if(!isalpha(line[i])){
-//					cout << "Neispravna sintaksa!" << endl;
+					cout << "Neispravna sintaksa!" << endl;
 					return false;
 				}else{
 					symbol+=line[i];
-//					cout << line[i] << flush;
+					cout << line[i] << flush;
 					continue;
 				}
 			}
@@ -152,11 +276,17 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 				instruction.push_back(symbol);
 				symbol.clear();
 				node = 0;
-//				cout << line[i] << flush;
+				cout << line[i] << flush;
 				continue;
 			}
-			
-//			cout << "Sintaksa neispravna:" << endl;	
+			try{
+				node->getChildren()->at(line[i]);
+				continue;
+			}catch(out_of_range e){
+				
+			}
+						
+			cout << "Sintaksa neispravna:" << endl;	
 			return false;
 		}
 		
@@ -164,6 +294,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	if(!symbol.empty())
 			instruction.push_back(symbol);
 //	cout << "Instrukcija: " << lineNumber << endl;
+	cout << endl << flush;
 	for(list<string>::iterator it = instruction.begin(); it!=instruction.end(); it++){
 		cout << *it << endl;
 	}
