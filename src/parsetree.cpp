@@ -291,7 +291,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	bool whiteSpaceExpected = false;
 	bool newLineExpected = false;
 	bool conditionExpected = false;
-	bool conditionWasExpected = false;
+	bool conditionReceived = false;
 	bool conditionHit = false;
 	bool symbolExpected = false;
 
@@ -325,7 +325,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 			continue;
 		}
 		
-		if(isspace(line[i]) && conditionWasExpected && !conditionHit){
+		if(isspace(line[i]) && conditionReceived && !conditionHit){
 			cout << "Error: irregular instruction suffix" << endl << flush;
 			return false;
 		}
@@ -343,18 +343,29 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 		}
 		
 		try{
+			
+			//	Go through tree
 			if(node == 0)
 				node = root.at(line[i]);			
 			else
 				node = node->getChildren()->at(line[i]);
+			
+			//	Found keyword
 			if(node->getValue() != "Undefined"){
 //				cout << node->getSymbol() << flush;
+				
+				//	Add current symbol to finish the instruction 
 				symbol += node->getSymbol();
+				
+				//	In case that instruction had something at beginning it would got found but must not be accepted 
 				if(symbol != node->getValue()){
 					cout << "Unrecognized instruction, instruction has wrong bytes at beginning" << endl;
 					return false;
 				}
+				
+				//	Legal instruction so add it
 				instruction.push_back(node->getValue());				
+				//	Refresh current symbol tracking
 				symbol.clear();
 				
 				// WhiteSpace expected if it is not regdir, memdir, address, pcrel, regindpom, hex
@@ -368,27 +379,30 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 				// Enable condition suffix
 				if( (node->getType() == Instruction )){
 					conditionExpected = true;
-					conditionHit = false;
 				}
 				
 				// Forbid condition suffix
 				if( (node->getType() == Condition )){
 					conditionExpected = false;
-					conditionWasExpected = true;
-					conditionHit = true;
+					conditionReceived = true;
 				}
 				node = 0;
 				
-				
-			}
-			else{
+			
+			//	We are still traversing the tree, just add new symbols
+			}else{
 //				cout << node->getSymbol() << flush;
 				symbol+=node->getSymbol();
 			}
+		//	Tree broken, possibly symbol being defined or some other syntax character
 		}catch(out_of_range e){
+			
+			//	If any of registers parsed, symbol would be empty and next char would be comma, so need to continue
 			if(symbol.empty() && line[i] == ','){
 				continue;
 			}
+			
+			//	If symbol is empty 
 			if(symbol.empty()){
 				if(isdigit(line[i])){
 					symbol+=line[i];
