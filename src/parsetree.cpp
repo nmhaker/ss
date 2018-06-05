@@ -249,6 +249,36 @@ void ParseTree::populateTree() {
 	tn_0->addChild(tn_hex_x);
 	this->addChild(tn_0);
 	
+	//Num of operands expected for instructions 
+	this->addReqOp("iret", 0);
+	this->addReqOp("ret", 0);
+	this->addReqOp(".text", 0);
+	this->addReqOp(".data", 0);
+	this->addReqOp(".bss", 0);
+	this->addReqOp(".end", 0);
+	this->addReqOp("push", 1);
+	this->addReqOp("pop", 1);
+	this->addReqOp("call", 1);
+	this->addReqOp("jmp", 1);
+	this->addReqOp(".skip", 1);
+	this->addReqOp(".align", 1);
+	this->addReqOp(".char", 1);
+	this->addReqOp(".word", 1);
+	this->addReqOp(".long", 1);
+	this->addReqOp("add", 2);
+	this->addReqOp("sub", 2);
+	this->addReqOp("mul", 2);
+	this->addReqOp("div", 2);
+	this->addReqOp("cmp", 2);
+	this->addReqOp("and", 2);
+	this->addReqOp("or", 2);
+	this->addReqOp("not", 2);
+	this->addReqOp("test", 2);
+	this->addReqOp("mov", 2);
+	this->addReqOp("shl", 2);
+	this->addReqOp("shr", 2);
+	this->addReqOp(".global", 3); // 3 means variable operand length
+	
 }
 
 bool ParseTree::parse(std::string line, int lineNumber) {
@@ -263,6 +293,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	bool conditionExpected = false;
 	bool conditionWasExpected = false;
 	bool conditionHit = false;
+	bool symbolExpected = false;
 
 	for(unsigned i=0; i<line.size(); i++){
 		
@@ -280,6 +311,20 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 			return false;
 		}
 		
+		if(isspace(line[i]) && conditionExpected){
+			conditionExpected = false;
+//			whiteSpaceExpected = true;
+			symbolExpected = true;
+			whiteSpaceExpected = false;
+			continue;
+		}
+		
+		if(isspace(line[i]) && symbolExpected){
+			symbolExpected = false;
+			newLineExpected = true;
+			continue;
+		}
+		
 		if(isspace(line[i]) && conditionWasExpected && !conditionHit){
 			cout << "Error: irregular instruction suffix" << endl << flush;
 			return false;
@@ -291,6 +336,12 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 			whiteSpaceExpected = false;
 			continue;
 		}
+		
+		if(isspace(line[i] && node != 0)){
+			whiteSpaceExpected = true;
+			continue;
+		}
+		
 		try{
 			if(node == 0)
 				node = root.at(line[i]);			
@@ -415,5 +466,10 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 ParseTree* ParseTree::addChild(TreeNode* node) {
 	root.insert( std::pair<char, TreeNode*>(node->getSymbol(), node));
+	return this;
+}
+
+ParseTree* ParseTree::addReqOp(std::string instruction, int num_of_operands) {
+	req_op.insert( std::pair<string, int>(instruction, num_of_operands));
 	return this;
 }

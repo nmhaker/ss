@@ -28,11 +28,14 @@ public:
 	
 private:
 	std::map<char, TreeNode*> root;
+	std::map<std::string, int> req_op;
+	
 	int size;
 	
 	void populateTree();
 	
 	ParseTree* addChild(TreeNode*);
+	ParseTree* addReqOp(std::string, int);
 };
 
 #endif /* PARSETREE_H */
