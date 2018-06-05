@@ -31,6 +31,8 @@ private:
 	int size;
 	
 	void populateTree();
+	
+	ParseTree* addChild(TreeNode*);
 };
 
 #endif /* PARSETREE_H */

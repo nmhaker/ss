@@ -44,9 +44,11 @@ void Assembler::test() {
 	ParseTree*  pt = new ParseTree();
 	for(int i=1; i<=lines->getSize(); i++){
 		if(pt->parse(lines->getLine(i), i)){
-			cout << "Successful parse" << endl;	
+//			cout << "Successful parse" << endl;	
+//			cout << i << endl;
 		}else{
 			cout << "Unsuccessful parse" << endl;
+			break;
 		}
 	}
     delete pt;

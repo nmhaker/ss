@@ -31,7 +31,8 @@ enum Type{
 	Address,
 	Memdir_imm,
 	Regdir,
-	Regindpom
+	Regindpom,
+	Hex
 };
 
 class TreeNode{
