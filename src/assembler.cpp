@@ -30,6 +30,9 @@ Assembler::Assembler(char* inputFileName){
 
 	}else{
 		cout << "Nije otvoren ulazni stream" << endl;
+		int a;
+		cin >> a;
+		exit(1);
 	}
 
 	test();
@@ -48,7 +51,6 @@ void Assembler::test() {
 //			cout << i << endl;
 		}else{
 			cout << "Unsuccessful parse" << endl;
-			break;
 		}
 	}
     delete pt;

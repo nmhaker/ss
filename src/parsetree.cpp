@@ -14,6 +14,10 @@
 #include "../include/parsetree.h"
 #include "../include/exception.h"
 
+#include <iostream>
+#include <list>
+#include <string>
+
 using namespace std;
 
 ParseTree::ParseTree() {
@@ -209,7 +213,7 @@ void ParseTree::populateTree() {
 	
 	TreeNode* tn_r = new TreeNode('r', Symbol);
 	TreeNode* tn_ret_e = new TreeNode('e', Symbol);
-	TreeNode* tn_ret_t = new TreeNode('t', Instruction);
+	TreeNode* tn_ret_t = new TreeNode('t', Instruction, "ret");
 	TreeNode* tn_r0_0 = new TreeNode('0', Regdir, "r0");
 	TreeNode* tn_r1_1 = new TreeNode('1', Regdir, "r1");
 	TreeNode* tn_r2_2 = new TreeNode('2', Regdir, "r2");
@@ -244,10 +248,10 @@ void ParseTree::populateTree() {
 	TreeNode* tn_dollar = new TreeNode('$', Pcrel, "$");
 	this->addChild(tn_ampersand)->addChild(tn_asterisk)->addChild(tn_dollar);
 	
-	TreeNode* tn_0 = new TreeNode('0', Symbol);
-	TreeNode* tn_hex_x = new TreeNode('x', Hex, "0x");
-	tn_0->addChild(tn_hex_x);
-	this->addChild(tn_0);
+//	TreeNode* tn_0 = new TreeNode('0', Symbol);
+//	TreeNode* tn_hex_x = new TreeNode('x', Hex, "0x");
+//	tn_0->addChild(tn_hex_x);
+//	this->addChild(tn_0);
 	
 	//Num of operands expected for instructions 
 	this->addReqOp("iret", 0);
@@ -284,192 +288,298 @@ void ParseTree::populateTree() {
 bool ParseTree::parse(std::string line, int lineNumber) {
 	
 	TreeNode* node = 0;
+	
 	list<string> instruction;
 	instruction.push_back(to_string(lineNumber));
+	
 	string symbol;
 	string arithmetic;
-	bool whiteSpaceExpected = false;
-	bool newLineExpected = false;
-	bool conditionExpected = false;
-	bool conditionReceived = false;
-	bool conditionHit = false;
-	bool symbolExpected = false;
+	
+	symbol.clear();
+	arithmetic.clear();
+	
+	int operands_expected = -1;
+	
+	int operands_counter = 0;
+	
+	bool opcode_got = false;
+	bool is_symbol = false;
+	bool reading_instruction = false;
+	bool check_condition = false;
 
-	for(unsigned i=0; i<line.size(); i++){
+	for(unsigned i=0; i<line.size(); i++){	
 		
-		if(newLineExpected && !conditionExpected){
-			if(isspace(line[i]))
+		if(opcode_got && !check_condition){
+
+			// Got .global directive
+			if (operands_expected == 3) {
+
+				//	Whitespace expected
+				if (!isspace(line[i])) {
+					cout << "Error whitespace expected after .global directive" << endl << flush;
+					return false;
+				}
+
+				//	Parse till the end of line
+				while (i < line.size()) {
+					//	Carry out whitespace
+					while (isspace(line[i]) && (i < line.size())) i++;
+
+					//	If not letter then error
+					if (!isalpha(line[i])) {
+						cout << "Error alphabet character expected for symbol" << endl << flush;
+						return false;
+					}
+
+					//	Get symbol till whitespace or comma
+					//	Carry out whitespace
+					while (!isspace(line[i]) && (line[i]!=',') && (i < line.size())) {
+						if (!isalnum(line[i])) {
+							cout << "Error: wrong symbol name at line: " << lineNumber << endl << flush;
+							return false;
+						}
+						symbol += line[i];
+						i++;
+					}
+					//	Add symbol to instruction
+					instruction.push_back(symbol);
+					symbol.clear();
+
+					if (i == line.size()) {
+						continue;
+					}
+					//	Carry out whitespace
+					while (isspace(line[i])  && (i < line.size())) i++;
+					//	Carry out comma
+					if (line[i] == ',') {
+						i++;
+					}
+					else {
+						cout << "Syntax error, unexpected symbol: ,," << line[i] << ",, at line: " << lineNumber << endl << flush;
+						return false;
+					}
+				}
+//				return true;
+			}
+			else if (operands_expected == 2) {
+				//PARSED INSTRUCTION
+				for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
+					cout << *it << endl;
+				}
+				cout << "Operands expected = 2 at line: " << lineNumber << endl << flush; 
+				return true;
+			}
+			else if (operands_expected == 1) {
+				//PARSED INSTRUCTION
+				//for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
+					//cout << *it << endl;
+				//}
+				while (isspace(line[i]) && (i < line.size())) i++;
+				if (isalpha(line[i])) {
+					while (isalnum(line[i]) && (i<line.size())) {
+						symbol += line[i];
+						i++;
+					}
+					instruction.push_back(symbol);
+					//cout << symbol << endl << flush;
+					symbol.clear();
+					while (isspace(line[i]) && (i < line.size())) i++;
+					if (i != line.size()) {
+						cout << "Error expecting white space after first operand" << endl << flush;
+						return false;
+					}
+				} else if (isdigit(line[i])) {
+					if (instruction.back() == ".char" || instruction.back() == ".word" || instruction.back() == ".long" || instruction.back() == ".align" || instruction.back() == ".skip") {
+						while (isdigit(line[i]) && (i<line.size())) {
+						symbol += line[i];
+						i++;
+						}
+						instruction.push_back(symbol);
+						//cout << symbol << endl << flush;
+						symbol.clear();
+						while (isspace(line[i]) && (i < line.size())) i++;
+						if (i != line.size()) {
+							cout << "Error expecting white space after first operand" << endl << flush;
+							return false;
+						}
+					}
+					else {
+						cout << "Operand must be label starting with letter" << endl << flush;
+						return false;
+					}
+				} 
+			
+				
+				//cout << "Operands expected = 1 at line: " << lineNumber << endl << flush;
+				//return true;
+			}
+			else if (operands_expected == 0) {
+				while (isspace(line[i]) && (i < line.size()))i++;
+				if (i != line.size()) {
+					cout << "Error: Expected 0 operands" << endl << flush;
+					return false;
+				}
+			}
+			else {
+				cout << "Compiler error, wrong size of expected operands" << endl << flush;
+				exit(1);
+			}
+		}else if(is_symbol){
+			if(isspace(line[i])){
+				while(isspace(line[i]) && i<line.size()){
+					i++;
+				}
+				if (i == line.size()) {
+					instruction.push_back(symbol);
+					continue;
+				}
+				if(line[i]!= ':'){
+					cout << "Error wrong symbol declaration at line: " << lineNumber << endl << flush;
+					return false;
+				}else{
+					instruction.push_back(symbol);
+					symbol.clear();		
+					is_symbol = false;
+				}
+			}
+			if(line[i] == ':'){
+				instruction.push_back(symbol);
+				symbol.clear();
+				is_symbol = false;
 				continue;
-			else{
-				cout << endl << "Error: New line expected at line: " << lineNumber << endl << flush;
+			}else if(isalnum(line[i])){
+				symbol += line[i];
+				continue;
+			}else{
+				cout << "Error wrong symbol declaration at line: " << lineNumber << endl << flush;
 				return false;
 			}
 		}
-		
-		if(!isspace(line[i]) && whiteSpaceExpected && !conditionExpected){
-			cout << "Unrecognized instruction at line: " << lineNumber << endl;
-			return false;
-		}
-		
-		if(isspace(line[i]) && conditionExpected){
-			conditionExpected = false;
-//			whiteSpaceExpected = true;
-			symbolExpected = true;
-			whiteSpaceExpected = false;
-			continue;
-		}
-		
-		if(isspace(line[i]) && symbolExpected){
-			symbolExpected = false;
-			newLineExpected = true;
-			continue;
-		}
-		
-		if(isspace(line[i]) && conditionReceived && !conditionHit){
-			cout << "Error: irregular instruction suffix" << endl << flush;
-			return false;
-		}
-		
-		if(isspace(line[i]) && node == 0){
-//			cout << line[i] << flush;
-			arithmetic.clear();
-			whiteSpaceExpected = false;
-			continue;
-		}
-		
-		if(isspace(line[i] && node != 0)){
-			whiteSpaceExpected = true;
-			continue;
-		}
-		
-		try{
-			
-			//	Go through tree
-			if(node == 0)
-				node = root.at(line[i]);			
-			else
-				node = node->getChildren()->at(line[i]);
-			
-			//	Found keyword
-			if(node->getValue() != "Undefined"){
-//				cout << node->getSymbol() << flush;
-				
-				//	Add current symbol to finish the instruction 
-				symbol += node->getSymbol();
-				
-				//	In case that instruction had something at beginning it would got found but must not be accepted 
-				if(symbol != node->getValue()){
-					cout << "Unrecognized instruction, instruction has wrong bytes at beginning" << endl;
+		else {
+
+			//	Parse new instruction
+			//	Map.at() throws exception on not found key value pair
+			try {
+
+				//	There should be no whitespace while reading instruction
+				if (isspace(line[i]) && reading_instruction) {
+					cout << "Error while parsing instruction, got whitespace, at line: " << lineNumber << endl << flush;
 					return false;
 				}
-				
-				//	Legal instruction so add it
-				instruction.push_back(node->getValue());				
-				//	Refresh current symbol tracking
-				symbol.clear();
-				
-				// WhiteSpace expected if it is not regdir, memdir, address, pcrel, regindpom, hex
-				if( (node->getType() != Regdir) && (node->getType() != Memdir) && (node->getType() != Address) && (node->getType() != Pcrel) && (node->getType() != Regindpom) && (node->getType() != Hex))
-					whiteSpaceExpected = true;	
-				
-				// Forbid placing code after section directive
-				if( (node->getType() == Section ))
-					newLineExpected = true;
-				
-				// Enable condition suffix
-				if( (node->getType() == Instruction )){
-					conditionExpected = true;
-				}
-				
-				// Forbid condition suffix
-				if( (node->getType() == Condition )){
-					conditionExpected = false;
-					conditionReceived = true;
-				}
-				node = 0;
-				
-			
-			//	We are still traversing the tree, just add new symbols
-			}else{
-//				cout << node->getSymbol() << flush;
-				symbol+=node->getSymbol();
-			}
-		//	Tree broken, possibly symbol being defined or some other syntax character
-		}catch(out_of_range e){
-			
-			//	If any of registers parsed, symbol would be empty and next char would be comma, so need to continue
-			if(symbol.empty() && line[i] == ','){
-				continue;
-			}
-			
-			//	If symbol is empty 
-			if(symbol.empty()){
-				if(isdigit(line[i])){
-					symbol+=line[i];
-//					cout << line[i] << flush;
+
+				//	If there is no condition suffix, dont parse this as new instruction but rather proceed to handle operands
+				if (isspace(line[i]) && check_condition) {
+					i--;
+					check_condition = false;
 					continue;
 				}
-				if(isalpha(line[i])){
-					symbol+=line[i];
-//					cout << line[i] << flush;
-					continue;
+
+				//	Remove whitespace from the beginning of the instruction
+				while (isspace(line[i]) && (i < line.size())) {
+					i++;
+					if (i == line.size()) {
+						//PARSED INSTRUCTION
+						for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
+							cout << *it << endl;
+						}
+						return true;
+					}
 				}
-			}
-			if(!symbol.empty() && line[i]==','){
-				instruction.push_back(symbol);
-				symbol.clear();
-				node = 0;
-//				cout << line[i] << flush;
-				continue;
-			}
-			if(!symbol.empty() && line[i]==':'){
-				instruction.push_back(symbol);
-				symbol.clear();
-				node=0;
-//				cout << line[i] << flush;
-				continue;
-			}
-			if(line[i] == '+' || line[i]=='-'){
-				if(arithmetic.empty()){
-					instruction.push_back("+");
-					instruction.push_back(symbol);
+
+				//	Go through tree
+				if (node == 0)
+					node = root.at(line[i]);
+				else
+					node = node->getChildren()->at(line[i]);
+
+				//	Set flag to check against valid instruction
+				reading_instruction = true;
+
+				//	Found keyword
+				if (node->getValue() != "Undefined") {
+
+					//	Add current symbol to finish the instruction 
+					symbol += node->getSymbol();
+
+					//	In case that instruction had something at beginning it would got found but must not be accepted 
+					if (symbol != node->getValue()) {
+						cout << "Unrecognized instruction, instruction has wrong bytes at beginning" << endl;
+						return false;
+					}
+
+					try {
+						operands_expected = req_op.at(node->getValue());
+					}
+					catch (out_of_range e) {
+						operands_expected = req_op.at(instruction.back());
+					}
+
+					//	Legal instruction so add it
+					instruction.push_back(node->getValue());
+
+					//	Reset current symbol tracking
 					symbol.clear();
-					node=0;
-					arithmetic = line[i];
-					continue;
-				}else{
-					instruction.push_back(arithmetic);
-					instruction.push_back(symbol);
-					symbol.clear();
-					node=0;
-					arithmetic = line[i];
-					continue;
+
+					if (node->getType() != Directive) {
+						check_condition = true;
+					}
+
+					if (node->getType() == Condition) {
+						check_condition = false;
+					}
+
+					reading_instruction = false;
+					opcode_got = true;
+
+					//	Reset treeNode
+					node = 0;
+
+
+					//	We are still traversing the tree, just add new symbols
 				}
+				else {
+					symbol += node->getSymbol();
+				}
+
+				//	Tree broken, possibly symbol being defined otherwise error
 			}
-			try{
-				if(node != 0){
-					node->getChildren()->at(line[i]);
-					continue;
-				}else{
-					cout << "Bad syntax at line: " << lineNumber << endl;	
+			catch (out_of_range e) {
+
+				//	Reset tree traversal
+				node = 0;
+
+				//	If in check_condition mode, and thrown exception it means suffix wasn't condition, therefore non existent instruction
+				if (check_condition) {
+					cout << "Not condition suffix, wrong syntax" << endl << flush;
 					return false;
 				}
-			}catch(out_of_range e){
-				symbol+=line[i];
-				continue;
-			}									
+
+				//	Enable symbol parsing
+				is_symbol = true;
+
+				//	Disable reading instruction
+				reading_instruction = false;
+
+				//	Constants starts with letter and then number
+				//	Starting with number is forbidden
+
+				//	If number is first that is parsed it is syntax error
+				if (isdigit(line[i]) && (symbol.empty())) {
+					cout << "Instruction cannot start with number, error at line: " << lineNumber << endl;
+					return false;
+				}
+
+				//	Otherwise add char to symbol
+				if(isalnum(line[i]))
+					symbol += line[i];
+
+				//	If char is colon i need to return it for later parse
+				if(line[i] == ':')
+					i--;
+			}
 		}
-		
 	}
-	if(!arithmetic.empty()){
-		instruction.push_back(arithmetic);
-		arithmetic.clear();
-	}
-	if(!symbol.empty())
-		instruction.push_back(symbol);
-//	cout << "Instrukcija: " << lineNumber << endl;
-	cout << endl << flush;
-	
+
 	//PARSED INSTRUCTION
 	for(list<string>::iterator it = instruction.begin(); it!=instruction.end(); it++){
 		cout << *it << endl;

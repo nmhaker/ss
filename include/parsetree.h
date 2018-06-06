@@ -17,7 +17,6 @@
 #include <map>
 
 #include "treenode.h"
-#include "../string_toolkit/strtk.hpp"
 
 class ParseTree {
 public:
