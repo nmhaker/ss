@@ -1,13 +1,13 @@
 .global aaa, c
 .global b
 .text	
-	jmpeq 0xab2 a2
+	jmpeq a a2
 	jmp e a
 	jmpaseq b
-	jmp d
+	asjmp d
 	call foo
 d2a:	.long d
-	mov r0 , b
+	mov r0, b
 	mov c, r1
 	mov r2, e
 foo:	cmp a, b

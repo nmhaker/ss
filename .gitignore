@@ -1,0 +1,5 @@
+*.o
+prog
+fajl.asm
+fajl_bk.asm
+fajl.asm
