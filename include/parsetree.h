@@ -15,6 +15,8 @@
 #define PARSETREE_H
 
 #include <map>
+#include <list>
+#include <string>
 
 #include "treenode.h"
 
@@ -32,6 +34,7 @@ private:
 	int size;
 	
 	void populateTree();
+	std::string getInstructionField(std::list<std::string>,std::string);
 	
 	ParseTree* addChild(TreeNode*);
 	ParseTree* addReqOp(std::string, int);

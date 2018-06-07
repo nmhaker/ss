@@ -13,6 +13,7 @@
 
 #include "../include/parsetree.h"
 #include "../include/exception.h"
+#include "../include/array.h"
 
 #include <iostream>
 #include <list>
@@ -243,7 +244,7 @@ void ParseTree::populateTree() {
 	tn_g->addChild(tn_gt_t);
 	this->addChild(tn_g);
 	
-	TreeNode* tn_ampersand = new TreeNode('&', Address, "&");
+	TreeNode* tn_ampersand = new TreeNode('&', Reference, "&");
 	TreeNode* tn_asterisk = new TreeNode('*', Memdir, "*");
 	TreeNode* tn_dollar = new TreeNode('$', Pcrel, "$");
 	this->addChild(tn_ampersand)->addChild(tn_asterisk)->addChild(tn_dollar);
@@ -290,6 +291,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	TreeNode* node = 0;
 	
 	list<string> instruction;
+	instruction.push_back("LINE_NUMBER");
 	instruction.push_back(to_string(lineNumber));
 	
 	string symbol;
@@ -307,7 +309,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	bool reading_instruction = false;
 	bool check_condition = false;
 
+	//	For more beautiful output
+	cout << endl << endl << flush;
+
 	for(unsigned i=0; i<line.size(); i++){	
+
 		
 		if(opcode_got && !check_condition){
 
@@ -341,7 +347,9 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						symbol += line[i];
 						i++;
 					}
+					
 					//	Add symbol to instruction
+					
 					instruction.push_back(symbol);
 					symbol.clear();
 
@@ -374,49 +382,357 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 				//for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
 					//cout << *it << endl;
 				//}
-				while (isspace(line[i]) && (i < line.size())) i++;
-				if (isalpha(line[i])) {
-					while (isalnum(line[i]) && (i<line.size())) {
-						symbol += line[i];
-						i++;
-					}
-					instruction.push_back(symbol);
-					//cout << symbol << endl << flush;
-					symbol.clear();
+
+				while (operands_counter != operands_expected) {
+
+					//	Skip whitespace
 					while (isspace(line[i]) && (i < line.size())) i++;
-					if (i != line.size()) {
-						cout << "Error expecting white space after first operand" << endl << flush;
-						return false;
-					}
-				} else if (isdigit(line[i])) {
-					if (instruction.back() == ".char" || instruction.back() == ".word" || instruction.back() == ".long" || instruction.back() == ".align" || instruction.back() == ".skip") {
-						while (isdigit(line[i]) && (i<line.size())) {
-						symbol += line[i];
-						i++;
+
+					//	Memdir addressing;	
+					//	symbols starting with 'r' are redirected for later parsing in case that was regdir addressing or symbol memdir
+					if ( (isalpha(line[i]) || line[i] == '.') && (line[i]!='r') ) {
+
+						instruction.push_back("MEMDIR");
+
+						if (line[i] == '.') {
+							symbol += line[i];
+							i++;
+						}
+						while (isalnum(line[i]) && (i < line.size())) {
+							symbol += line[i];
+							i++;
 						}
 						instruction.push_back(symbol);
 						//cout << symbol << endl << flush;
 						symbol.clear();
 						while (isspace(line[i]) && (i < line.size())) i++;
 						if (i != line.size()) {
-							cout << "Error expecting white space after first operand" << endl << flush;
+							cout << "Error expecting white space after first operand, at line: " << lineNumber << endl << flush;
 							return false;
 						}
 					}
+					//	Immediate addressing
+					else if (isdigit(line[i])) {
+
+						instruction.push_back("IMMEDIATE");
+
+						if (getInstructionField(instruction, "DIRECTIVE") == ".char" || getInstructionField(instruction, "DIRECTIVE") == ".word" || getInstructionField(instruction, "DIRECTIVE") == ".long" || getInstructionField(instruction, "DIRECTIVE") == ".align" || getInstructionField(instruction, "DIRECTIVE") == ".skip" || getInstructionField(instruction, "INSTRUCTION") == "push") {
+							while (isdigit(line[i]) && (i < line.size())) {
+								symbol += line[i];
+								i++;
+							}
+							instruction.push_back(symbol);
+							symbol.clear();
+							while (isspace(line[i]) && (i < line.size())) i++;
+							if (i != line.size()) {
+								cout << "Error expecting white space after first operand, at line: " << lineNumber << endl << flush;
+								return false;
+							}
+						} else if (getInstructionField(instruction, "INSTRUCTION") == "pop" || getInstructionField(instruction, "INSTRUCTION") == "call" || getInstructionField(instruction, "INSTRUCTION") == "jmp") {
+							cout << "Error: immediate addressing is not allowed for " << getInstructionField(instruction, "INSTRUCTION") << " instruction, at line: " << lineNumber << endl << flush;
+							return false;
+						}
+					}
+					//	Reference addressing
+					else if (line[i] == '&') {
+
+						instruction.push_back("REFERENCE");
+
+						//	Go to next
+						i++;
+
+						//	Whitespace not allowed after ampersand
+						if (isspace(line[i])) {
+							cout << "Error: whitespace not allowed after & symbol at line: " << lineNumber << endl << flush;
+							return false;
+						}
+
+						//	Allowed labels and section labels
+						if (isalpha(line[i]) || line[i] == '.') {
+
+							if (line[i] == '.') {
+								symbol += line[i];
+								i++;
+							}
+							
+							while (isalnum(line[i]) && (i<line.size())) {
+								symbol += line[i++];
+							}
+
+							while (i != line.size()) {
+								if (!isspace(line[i++])) {
+									cout << "Error: expected whitespace after only operand, at line: " << lineNumber << endl << flush;
+									return false;
+								}
+							}
+							
+							instruction.push_back(symbol);
+
+						}else{
+							cout << "Error: Wrong operand at line: " << lineNumber << endl << flush; 
+							return false;
+						}
+					}
+					//	Addressing memdir immediate, symbol '*'
+					else if (line[i] == '*') {
+						
+						instruction.push_back("MEMDIRIMMED");
+						i++;
+
+						//	Whitespace not allowed after ampersand
+						if (isspace(line[i])) {
+							cout << "Error: whitespace not allowed after * symbol at line: " << lineNumber << endl << flush;
+							return false;
+						}
+
+						if (isdigit(line[i])) {
+							while (isdigit(line[i]) && (i < line.size())) {
+								symbol += line[i++];
+							}
+							while (i != line.size()) {
+								if (!isspace(line[i])) {
+									cout << "Erro: whitespace expected after operand, at line: " << lineNumber << endl << flush;
+									return false;
+								}
+								i++;
+							}
+							instruction.push_back(symbol);
+						}
+						else {
+							cout << "Error: number expected for * operator, at line: " << lineNumber << endl << flush;
+							return false;
+						}
+
+					//	Regdir and regindpom addressing
+					} else if (line[i] == 'r') {
+						
+						//	Check if it is register or symbol or regindpom
+						if (i + 1 < line.size()) {
+							//	Maybe it is register/symbol/regindpom
+							if (line[i + 1] >= '0' && line[i + 1] <= '7') {
+
+								//	Added register symbol
+								symbol += line[i++];
+								symbol += line[i++];
+
+								bool forbid_symbol = false; 
+
+								while (isspace(line[i]) && (i < line.size())) {
+									forbid_symbol = true;
+									i++;
+								}
+
+								//	It is REGDIR addressing
+								if(i == line.size()){
+									instruction.push_back("REGDIR");
+									instruction.push_back(symbol);
+									continue;
+								}
+
+								//	Regindpom addressing
+								if (line[i] == '[') {
+
+									instruction.push_back("REGINDPOM");
+									instruction.push_back(symbol);
+									symbol.clear();
+
+									//	Go to next
+									i++;
+
+									//	Clear whitespace
+									while (isspace(line[i]) && (i < line.size())) i++;
+									
+									if (i == line.size()) {
+										cout << "Bad syntax for regindpom, missing closing brackets and operands at line: " << lineNumber << endl << flush;
+										return false;
+									}
+
+									if (isalpha(line[i])) {
+										instruction.push_back("SYMBOL");
+
+										while (isalnum(line[i]) && (i < line.size())) {
+											symbol += line[i];
+											i++;
+										}
+
+										while (isspace(line[i])) i++;
+
+										if (i == line.size()) {
+											cout << "bad syntax for regindpom, missing closing brackets at line: " << lineNumber << endl << flush;
+											return false;
+										}
+
+										if (line[i] != ']') {
+											cout << "Error: expected ] at line: " << lineNumber << endl << flush;
+											return false;
+										}
+
+										i++;
+
+										instruction.push_back(symbol);
+
+										while (i != line.size()) {
+											if (!isspace(line[i])) {
+												cout << "Error: expected whitespace after regindpom instruction, at line: " << lineNumber << endl << flush;
+												return false;
+											}
+										}
+										continue;
+
+									} else if (isdigit(line[i])) {
+										instruction.push_back("CONST");
+
+										while (isdigit(line[i]) && (i < line.size())) {
+											symbol += line[i];
+											i++;
+										}
+										if (i == line.size()) {
+											cout << "bad syntax for regindpom, missing operands and closing brackets at line: " << lineNumber << endl << flush;
+											return false;
+										}
+
+										while (isspace(line[i]) && (i < line.size())) i++;
+
+										if (i == line.size()) {
+											cout << "Error: expected ] at line: " << lineNumber << endl << flush;
+											return false;
+										}
+
+										if (line[i] != ']') {
+											cout << "Error: expected ] at line: " << lineNumber << endl << flush;
+											return false;
+										}
+										instruction.push_back(symbol);
+
+										//	Get to next
+										i++;
+
+										while (i != line.size()) {
+											if (!isspace(line[i])) {
+												cout << "Error: expected whitespace after reginpom instruction, at line: " << lineNumber << endl << flush;
+												return false;
+											}
+										}
+										continue;
+									}
+
+								}
+
+								//	If is alnum then it is symbol with MEMDIR addressing
+								if (isalnum(line[i]) && !forbid_symbol) {
+									instruction.push_back("MEMDIR");
+									while (isalnum(line[i]) && (i < line.size())) {
+										symbol += line[i];
+										i++;
+									}
+									while (i != line.size()) {
+										if (!isspace(line[i])) {
+											cout << "Error: whitespace expected after symbol operand, at line: " << lineNumber << endl << flush;
+											return false;
+										}
+									}
+									instruction.push_back(symbol);
+									continue;
+								}
+								else {
+									cout << "Error: syntax wrong, symbol not expected at line: " << lineNumber << flush << endl;
+									return false;
+								}
+
+							}
+							//	It was symbol with memdir addressing
+							else {
+								instruction.push_back("MEMDIR");
+
+								if (line[i] == '.') {
+									symbol += line[i];
+									i++;
+								}
+								while (isalnum(line[i]) && (i < line.size())) {
+									symbol += line[i];
+									i++;
+								}
+								instruction.push_back(symbol);
+								//cout << symbol << endl << flush;
+								symbol.clear();
+								while (isspace(line[i]) && (i < line.size())) i++;
+								if (i != line.size()) {
+									cout << "Error expecting white space after first operand" << endl << flush;
+									return false;
+								}
+							}
+						}
+						//	It was symbol with memdir addressing
+						else {
+
+							instruction.push_back("MEMDIR");
+
+							if (line[i] == '.') {
+								symbol += line[i];
+								i++;
+							}
+							while (isalnum(line[i]) && (i < line.size())) {
+								symbol += line[i];
+								i++;
+							}
+							instruction.push_back(symbol);
+							//cout << symbol << endl << flush;
+							symbol.clear();
+							while (isspace(line[i]) && (i < line.size())) i++;
+							if (i != line.size()) {
+								cout << "Error expecting white space after first operand" << endl << flush;
+								return false;
+							}
+
+						}
+					}
+					//	Pcrelpom addressing
+					else if (line[i] == '$') {
+
+						instruction.push_back("PCRELPOM");
+
+						//	Skip to next
+						i++;
+						
+						//	Forbid whitespace after $
+						if (isspace(line[i])) {
+							cout << "Error: got whitespace but operand expected, at line: " << lineNumber << endl << flush;
+							return false;
+						}
+
+						if (!isalpha(line[i])) {
+							cout << "Error: symbol starting with alphabet expected, at line: " << lineNumber << endl << flush;
+							return false;
+						}
+
+						while (isalpha(line[i])) {
+							symbol += line[i];
+							i++;
+						}
+
+						instruction.push_back(symbol);
+						
+						while (i != line.size()) {
+							if (!isspace(line[i])) {
+								cout << "Error: expected whitespace till the end of line, at line: " << lineNumber << endl << flush;
+								return false;
+							}
+							i++;
+						}
+					}
+					//	Unknown addressing required
 					else {
-						cout << "Operand must be label starting with letter" << endl << flush;
+						cout << "Error: unknown addressing required" << endl << flush;
 						return false;
 					}
-				} 
-			
+					operands_counter++;
+				}
 				
-				//cout << "Operands expected = 1 at line: " << lineNumber << endl << flush;
-				//return true;
 			}
 			else if (operands_expected == 0) {
 				while (isspace(line[i]) && (i < line.size()))i++;
 				if (i != line.size()) {
-					cout << "Error: Expected 0 operands" << endl << flush;
+					cout << "Error: Expected 0 operands at line: " << lineNumber << endl << flush;
 					return false;
 				}
 			}
@@ -430,6 +746,10 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					i++;
 				}
 				if (i == line.size()) {
+					//	Local symbol
+					if (instruction.size() == 2) {
+						instruction.push_back("LABEL");
+					}
 					instruction.push_back(symbol);
 					continue;
 				}
@@ -437,12 +757,20 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					cout << "Error wrong symbol declaration at line: " << lineNumber << endl << flush;
 					return false;
 				}else{
+					//	Local symbol
+					if (instruction.size() == 2) {
+						instruction.push_back("LABEL");
+					}
 					instruction.push_back(symbol);
 					symbol.clear();		
 					is_symbol = false;
 				}
 			}
 			if(line[i] == ':'){
+				//	Local symbol
+				if (instruction.size() == 2) {
+					instruction.push_back("LABEL");
+				}
 				instruction.push_back(symbol);
 				symbol.clear();
 				is_symbol = false;
@@ -515,6 +843,12 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					}
 
 					//	Legal instruction so add it
+					switch (node->getType()) {
+						case Directive: instruction.push_back("DIRECTIVE"); break;
+						case Condition:	instruction.push_back("CONDITION");	break;
+						case Instruction: instruction.push_back("INSTRUCTION"); break;
+						case Section: instruction.push_back("SECTION"); break;
+					}
 					instruction.push_back(node->getValue());
 
 					//	Reset current symbol tracking
@@ -550,7 +884,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 				//	If in check_condition mode, and thrown exception it means suffix wasn't condition, therefore non existent instruction
 				if (check_condition) {
-					cout << "Not condition suffix, wrong syntax" << endl << flush;
+					cout << "Error not condition suffix, wrong syntax at line: " << lineNumber << endl << flush;
 					return false;
 				}
 
@@ -596,4 +930,15 @@ ParseTree* ParseTree::addChild(TreeNode* node) {
 ParseTree* ParseTree::addReqOp(std::string instruction, int num_of_operands) {
 	req_op.insert( std::pair<string, int>(instruction, num_of_operands));
 	return this;
+}
+
+string ParseTree::getInstructionField(list<string> lst, string key) {
+	for (std::list<string>::iterator it = lst.begin(); it != lst.end(); it++) {
+		if (*it == key) {
+			return *(++it);
+		}
+	}
+	string empty;
+	empty.clear();
+	return empty;
 }

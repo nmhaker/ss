@@ -28,7 +28,7 @@ enum Type{
 	Immediate,
 	Memdir,
 	Pcrel,
-	Address,
+	Reference,
 	Memdir_imm,
 	Regdir,
 	Regindpom,
