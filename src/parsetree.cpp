@@ -369,15 +369,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 				}
 //				return true;
 			}
-			else if (operands_expected == 2) {
-				//PARSED INSTRUCTION
-				for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
-					cout << *it << endl;
-				}
-				cout << "Operands expected = 2 at line: " << lineNumber << endl << flush; 
-				return true;
-			}
-			else if (operands_expected == 1) {
+			else if (operands_expected == 2 || operands_expected == 1) {
 				//PARSED INSTRUCTION
 				//for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
 					//cout << *it << endl;
@@ -526,6 +518,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 								if(i == line.size()){
 									instruction.push_back("REGDIR");
 									instruction.push_back(symbol);
+									operands_counter++;
 									continue;
 								}
 
@@ -577,6 +570,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 												return false;
 											}
 										}
+										operands_counter++;
 										continue;
 
 									} else if (isdigit(line[i])) {
@@ -613,6 +607,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 												return false;
 											}
 										}
+										operands_counter++;
 										continue;
 									}
 
@@ -632,6 +627,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 										}
 									}
 									instruction.push_back(symbol);
+									operands_counter++;
 									continue;
 								}
 								else {
