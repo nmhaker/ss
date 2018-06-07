@@ -369,19 +369,9 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 				}
 //				return true;
 			}
-			else if (operands_expected == 2) {
-				//PARSED INSTRUCTION
-				for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
-					cout << *it << endl;
-				}
-				cout << "Operands expected = 2 at line: " << lineNumber << endl << flush; 
-				return true;
-			}
-			else if (operands_expected == 1) {
-				//PARSED INSTRUCTION
-				//for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
-					//cout << *it << endl;
-				//}
+
+			//	1 or 2 Operands 
+			else if (operands_expected == 1 || operands_expected == 2) {
 
 				while (operands_counter != operands_expected) {
 
@@ -405,10 +395,22 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						instruction.push_back(symbol);
 						//cout << symbol << endl << flush;
 						symbol.clear();
+
+						//	Skip whitespace
 						while (isspace(line[i]) && (i < line.size())) i++;
-						if (i != line.size()) {
-							cout << "Error expecting white space after first operand, at line: " << lineNumber << endl << flush;
-							return false;
+
+						if (operands_expected == 1) {
+							if (i != line.size()) {
+								cout << "Error expecting white space after first operand, at line: " << lineNumber << endl << flush;
+								return false;
+							}
+						}
+						else {
+							if (line[i] != ',' && operands_counter == 1 && i!=line.size()) {
+								cout << "Error comma expected, at line: " << lineNumber << endl << flush;
+								return false;
+							}
+							i++;
 						}
 					}
 					//	Immediate addressing
@@ -416,17 +418,31 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 						instruction.push_back("IMMEDIATE");
 
-						if (getInstructionField(instruction, "DIRECTIVE") == ".char" || getInstructionField(instruction, "DIRECTIVE") == ".word" || getInstructionField(instruction, "DIRECTIVE") == ".long" || getInstructionField(instruction, "DIRECTIVE") == ".align" || getInstructionField(instruction, "DIRECTIVE") == ".skip" || getInstructionField(instruction, "INSTRUCTION") == "push") {
+						if (getInstructionField(instruction, "DIRECTIVE") == ".char" || getInstructionField(instruction, "DIRECTIVE") == ".word" || getInstructionField(instruction, "DIRECTIVE") == ".long" || getInstructionField(instruction, "DIRECTIVE") == ".align" || getInstructionField(instruction, "DIRECTIVE") == ".skip" || getInstructionField(instruction, "INSTRUCTION") == "push" || operands_expected == 2) {
+
 							while (isdigit(line[i]) && (i < line.size())) {
 								symbol += line[i];
 								i++;
 							}
+
 							instruction.push_back(symbol);
 							symbol.clear();
+
+							//	Skip whitespace
 							while (isspace(line[i]) && (i < line.size())) i++;
-							if (i != line.size()) {
-								cout << "Error expecting white space after first operand, at line: " << lineNumber << endl << flush;
-								return false;
+
+							if (operands_expected == 1) {
+								if (i != line.size()) {
+									cout << "Error expecting white space after first operand, at line: " << lineNumber << endl << flush;
+									return false;
+								}
+							}
+							else {
+								if (line[i] != ',' && operands_counter == 1 && i != line.size()) {
+									cout << "Error comma expected, at line: " << lineNumber << endl << flush;
+									return false;
+								}
+								i++;
 							}
 						} else if (getInstructionField(instruction, "INSTRUCTION") == "pop" || getInstructionField(instruction, "INSTRUCTION") == "call" || getInstructionField(instruction, "INSTRUCTION") == "jmp") {
 							cout << "Error: immediate addressing is not allowed for " << getInstructionField(instruction, "INSTRUCTION") << " instruction, at line: " << lineNumber << endl << flush;
@@ -459,14 +475,27 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 								symbol += line[i++];
 							}
 
-							while (i != line.size()) {
-								if (!isspace(line[i++])) {
-									cout << "Error: expected whitespace after only operand, at line: " << lineNumber << endl << flush;
+							if (operands_expected == 1) {
+								while (i != line.size()) {
+									if (!isspace(line[i++])) {
+										cout << "Error: expected whitespace after only operand, at line: " << lineNumber << endl << flush;
+										return false;
+									}
+								}
+							}
+							else {
+								//	Skip whitespace
+								while (isspace(line[i]) && (i < line.size()))i++;
+
+								if (line[i] != ',' && operands_counter == 1 && i != line.size()) {
+									cout << "Error comma expected, at line: " << lineNumber << endl << flush;
 									return false;
 								}
+								i++;
 							}
 							
 							instruction.push_back(symbol);
+							symbol.clear();
 
 						}else{
 							cout << "Error: Wrong operand at line: " << lineNumber << endl << flush; 
@@ -486,17 +515,34 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						}
 
 						if (isdigit(line[i])) {
+
 							while (isdigit(line[i]) && (i < line.size())) {
 								symbol += line[i++];
 							}
-							while (i != line.size()) {
-								if (!isspace(line[i])) {
-									cout << "Erro: whitespace expected after operand, at line: " << lineNumber << endl << flush;
+
+							if (operands_expected == 1) {
+								while (i != line.size()) {
+									if (!isspace(line[i])) {
+										cout << "Erro: whitespace expected after operand, at line: " << lineNumber << endl << flush;
+										return false;
+									}
+									i++;
+								}
+							}
+							else {
+								//	Skip whitespace
+								while (isspace(line[i]) && (i < line.size()))i++;
+
+								if (line[i] != ',' && operands_counter == 1 && i != line.size()) {
+									cout << "Error comma expected, at line: " << lineNumber << endl << flush;
 									return false;
 								}
 								i++;
 							}
+
 							instruction.push_back(symbol);
+							symbol.clear();
+							
 						}
 						else {
 							cout << "Error: number expected for * operator, at line: " << lineNumber << endl << flush;
@@ -517,16 +563,44 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 								bool forbid_symbol = false; 
 
+								//	Skip whitespace
 								while (isspace(line[i]) && (i < line.size())) {
 									forbid_symbol = true;
 									i++;
 								}
+								if (i == line.size())
+									forbid_symbol = true;
 
-								//	It is REGDIR addressing
-								if(i == line.size()){
-									instruction.push_back("REGDIR");
-									instruction.push_back(symbol);
-									continue;
+								if (operands_expected == 1) {
+
+									//	If end of line reached -> REGDIR
+									if (i == line.size()) {
+										instruction.push_back("REGDIR");
+										instruction.push_back(symbol);
+										operands_counter++;
+										i++;
+										symbol.clear();
+										continue;
+									}
+									else if (i != line.size() && forbid_symbol==true && line[i]!='['){
+										cout << "Error: newline expected, at line: " << lineNumber << endl << flush;
+										return false;
+									}
+
+								} else {
+									//	If comma reached -> first operand REGDIR, if whitespace reached / eol -> second operand REGDIR
+									if ( forbid_symbol && ( (operands_counter == 0 && line[i]==',') || (operands_counter == 1 && i==line.size()) ) ){
+										//	Add current register
+										instruction.push_back("REGDIR");
+										instruction.push_back(symbol);
+										operands_counter++;
+										i++;
+										symbol.clear();
+										continue;
+									}else if( !forbid_symbol && line[i]!=',' && line[i]!='[' && isspace(line[i]) ){ 
+										cout << "Error: symbol not expected, at line: " << lineNumber << endl << flush;
+										return false;
+									}
 								}
 
 								//	Regindpom addressing
@@ -571,12 +645,22 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 										instruction.push_back(symbol);
 
-										while (i != line.size()) {
-											if (!isspace(line[i])) {
+										if (operands_expected == 1 || operands_counter == 1){
+											while (i != line.size() && !isspace(line[i])) {
 												cout << "Error: expected whitespace after regindpom instruction, at line: " << lineNumber << endl << flush;
 												return false;
+												i++;
 											}
 										}
+										else {
+											while (i != line.size() || line[i] != ',') i++;
+											if (line[i] != ',') {
+												cout << "Error: comma expected after first operand, at line: " << lineNumber << endl << flush;
+												return false;
+											}
+											i++;
+										}
+										operands_counter++;
 										continue;
 
 									} else if (isdigit(line[i])) {
@@ -603,16 +687,32 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 											return false;
 										}
 										instruction.push_back(symbol);
+										symbol.clear();
 
 										//	Get to next
 										i++;
 
-										while (i != line.size()) {
-											if (!isspace(line[i])) {
-												cout << "Error: expected whitespace after reginpom instruction, at line: " << lineNumber << endl << flush;
-												return false;
+										if (operands_expected == 1 || operands_counter == 1) {
+											while (i != line.size()) {
+												if (!isspace(line[i])) {
+													cout << "Error: expected whitespace after reginpom instruction, at line: " << lineNumber << endl << flush;
+													return false;
+												}
+												i++;
 											}
 										}
+										else {
+
+											while ( (i != line.size()) && (line[i] != ',')) 
+												i++;
+
+											if (line[i] != ',') {
+												cout << "Error: comma expected after first operand, at line: " << lineNumber << endl << flush;
+												return false;
+											}
+											i++;
+										}
+										operands_counter++;
 										continue;
 									}
 
@@ -620,18 +720,36 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 								//	If is alnum then it is symbol with MEMDIR addressing
 								if (isalnum(line[i]) && !forbid_symbol) {
+
 									instruction.push_back("MEMDIR");
+
 									while (isalnum(line[i]) && (i < line.size())) {
 										symbol += line[i];
 										i++;
 									}
-									while (i != line.size()) {
-										if (!isspace(line[i])) {
-											cout << "Error: whitespace expected after symbol operand, at line: " << lineNumber << endl << flush;
-											return false;
+									instruction.push_back(symbol);
+									symbol.clear();
+
+									if ( operands_expected == 1 || operands_counter == 1) {
+										while (i != line.size()) {
+											if (!isspace(line[i])) {
+												cout << "Error: whitespace expected after symbol operand, at line: " << lineNumber << endl << flush;
+												return false;
+											}
+											i++;
 										}
 									}
-									instruction.push_back(symbol);
+									else {
+
+										while (i != line.size() && line[i] != ',') i++;
+
+										if (line[i] != ',') {
+											cout << "Error: comma expected after first operand, at line: " << lineNumber << endl << flush;
+											return false;
+										}
+										i++;
+									}
+									operands_counter++;
 									continue;
 								}
 								else {
@@ -711,10 +829,22 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						}
 
 						instruction.push_back(symbol);
+						symbol.clear();
 						
-						while (i != line.size()) {
-							if (!isspace(line[i])) {
-								cout << "Error: expected whitespace till the end of line, at line: " << lineNumber << endl << flush;
+						if (operands_counter == 1 || operands_expected == 1) {
+							while (i != line.size()) {
+								if (!isspace(line[i])) {
+									cout << "Error: expected whitespace till the end of line, at line: " << lineNumber << endl << flush;
+									return false;
+								}
+								i++;
+							}
+						}
+						else {
+							while (i != line.size() && line[i] != ',') i++;
+
+							if (line[i] != ',') {
+								cout << "Error: comma expected after first operand, at line: " << lineNumber << endl << flush;
 								return false;
 							}
 							i++;
