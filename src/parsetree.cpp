@@ -588,7 +588,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 									forbid_symbol = true;
 									i++;
 								}
-								if (i == line.size())
+								if (i == line.size() || line[i] == ',')
 									forbid_symbol = true;
 
 								//	REGDIR addressing
@@ -988,6 +988,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
 							cout << *it << endl;
 						}
+						parsed_instructions.insert(std::pair<int, list<string>>(lineNumber, instruction));
 						return true;
 					}
 				}
@@ -1096,6 +1097,8 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	for(list<string>::iterator it = instruction.begin(); it!=instruction.end(); it++){
 		cout << *it << endl;
 	}
+
+	parsed_instructions.insert(std::pair<int,list<string>>(lineNumber, instruction));
 	
 	return true;
 }
@@ -1130,6 +1133,19 @@ bool ParseTree::checkAddressing(std::list<std::string> list, string addressing)
 			return false;
 	}
 	return true;
+}
+
+std::list<std::string> ParseTree::getParsedInstruction(int line)
+{
+	try {
+		return parsed_instructions.at(line);
+	}
+	catch (out_of_range e) {
+		cout << "Parsed line of code not found, line: " << line << endl << flush;
+		list<string> emp;
+		emp.clear();
+		return emp;
+	}
 }
 
 string ParseTree::getInstructionField(list<string> lst, string key) {

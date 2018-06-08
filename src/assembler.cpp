@@ -35,23 +35,46 @@ Assembler::Assembler(char* inputFileName){
 		exit(1);
 	}
 
-	test();
+	assemble();
 }
 
 Assembler::~Assembler(){
 //	cout << "Destruktor" << endl;
     delete lines;
+    delete pt;
 }
 
-void Assembler::test() {
-	ParseTree*  pt = new ParseTree();
+void Assembler::assemble() {
+
+	pt = new ParseTree();
+
+	bool success = true;
+	//	First pass
 	for(int i=1; i<=lines->getSize(); i++){
 		if(pt->parse(lines->getLine(i), i)){
-//			cout << "Successful parse" << endl;	
-//			cout << i << endl;
+			firstPass(i);
 		}else{
-			cout << "Unsuccessful parse" << endl;
+			success = false;
+			break;
 		}
 	}
-    delete pt;
+
+	cout << endl << "FIRST PASS COMPLETED" << endl;
+	cout << endl << "Symbol Table:" << endl;
+
+	st->dumpTable();
+
+	//	Second pass
+	if(success)
+		for (int i = 1; i < lines->getSize(); i++) {
+			secondPass(i);
+		}
+}
+
+void Assembler::firstPass(int line) {
+	list<string> instruction = pt->getParsedInstruction(line);
+}
+
+void Assembler::secondPass(int line) {
+	list<string> instruction = pt->getParsedInstruction(line);
 }

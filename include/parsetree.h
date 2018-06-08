@@ -26,19 +26,22 @@ public:
     virtual ~ParseTree();
 	
 	bool parse(std::string line, int lineNumber);
-	
+	std::list<std::string> getParsedInstruction(int line);
+
 private:
 	std::map<char, TreeNode*> root;
 	std::map<std::string, int> req_op;
+
+	std::map<int, std::list<std::string>> parsed_instructions;
 	
 	int size;
 	
-	void populateTree();
 	std::string getInstructionField(std::list<std::string>,std::string);
+	bool checkAddressing(std::list<std::string> list, std::string addressing);
 	
+	void populateTree();
 	ParseTree* addChild(TreeNode*);
 	ParseTree* addReqOp(std::string, int);
-	bool checkAddressing(std::list<std::string> list, std::string addressing);
 };
 
 #endif /* PARSETREE_H */
