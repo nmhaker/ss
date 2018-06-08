@@ -382,6 +382,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					//	symbols starting with 'r' are redirected for later parsing in case that was regdir addressing or symbol memdir
 					if ( (isalpha(line[i]) || line[i] == '.') && (line[i]!='r') ) {
 
+						if (!checkAddressing(instruction, "MEMDIR")) {
+							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							return false;
+						}
+
 						instruction.push_back("MEMDIR");
 
 						if (line[i] == '.') {
@@ -415,6 +420,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					}
 					//	Immediate addressing
 					else if (isdigit(line[i])) {
+	
+						if (!checkAddressing(instruction, "IMMEDIATE")) {
+							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							return false;
+						}
 
 						instruction.push_back("IMMEDIATE");
 
@@ -451,6 +461,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					}
 					//	Reference addressing
 					else if (line[i] == '&') {
+	
+						if (!checkAddressing(instruction, "REFERENCE")) {
+							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							return false;
+						}
 
 						instruction.push_back("REFERENCE");
 
@@ -505,6 +520,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					//	Addressing memdir immediate, symbol '*'
 					else if (line[i] == '*') {
 						
+						if (!checkAddressing(instruction, "MEMDIRIMMED")) {
+							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							return false;
+						}
+
 						instruction.push_back("MEMDIRIMMED");
 						i++;
 
@@ -571,6 +591,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 								if (i == line.size())
 									forbid_symbol = true;
 
+								//	REGDIR addressing
 								if (operands_expected == 1) {
 
 									//	If end of line reached -> REGDIR
@@ -605,6 +626,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 								//	Regindpom addressing
 								if (line[i] == '[') {
+
+									if (!checkAddressing(instruction, "REGINDPOM")) {
+										cout << "Error: too much memory references, at line: " << lineNumber << endl;
+										return false;
+									}
 
 									instruction.push_back("REGINDPOM");
 									instruction.push_back(symbol);
@@ -721,6 +747,12 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 								//	If is alnum then it is symbol with MEMDIR addressing
 								if (isalnum(line[i]) && !forbid_symbol) {
 
+									if (!checkAddressing(instruction, "MEMDIR")) {
+										cout << "Error: too much memory references, at line: " << lineNumber << endl;
+										return false;
+									}
+
+
 									instruction.push_back("MEMDIR");
 
 									while (isalnum(line[i]) && (i < line.size())) {
@@ -760,6 +792,12 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 							}
 							//	It was symbol with memdir addressing
 							else {
+
+								if (!checkAddressing(instruction, "MEMDIR")) {
+									cout << "Error: too much memory references, at line: " << lineNumber << endl;
+									return false;
+								}
+
 								instruction.push_back("MEMDIR");
 
 								if (line[i] == '.') {
@@ -782,6 +820,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						}
 						//	It was symbol with memdir addressing
 						else {
+
+							if (!checkAddressing(instruction, "MEMDIR")) {
+								cout << "Error: too much memory references, at line: " << lineNumber << endl;
+								return false;
+							}
 
 							instruction.push_back("MEMDIR");
 
@@ -806,6 +849,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					}
 					//	Pcrelpom addressing
 					else if (line[i] == '$') {
+
+						if (!checkAddressing(instruction, "PCRELPOM")) {
+							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							return false;
+						}
 
 						instruction.push_back("PCRELPOM");
 
@@ -1060,6 +1108,28 @@ ParseTree* ParseTree::addChild(TreeNode* node) {
 ParseTree* ParseTree::addReqOp(std::string instruction, int num_of_operands) {
 	req_op.insert( std::pair<string, int>(instruction, num_of_operands));
 	return this;
+}
+
+bool ParseTree::checkAddressing(std::list<std::string> list, string addressing)
+{
+	if (addressing == "REGDIR") {
+		return true;
+	}
+	else {
+		if (!getInstructionField(list, "IMMEDIATE").empty())
+			return false;
+		if (!getInstructionField(list, "REFERENCE").empty())
+			return false;
+		if (!getInstructionField(list, "MEMDIR").empty())
+			return false;
+		if (!getInstructionField(list, "MEMDIRIMMED").empty())
+			return false;
+		if (!getInstructionField(list, "REGINDPOM").empty())
+			return false;
+		if (!getInstructionField(list, "PCRELPOM").empty())
+			return false;
+	}
+	return true;
 }
 
 string ParseTree::getInstructionField(list<string> lst, string key) {

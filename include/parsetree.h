@@ -38,6 +38,7 @@ private:
 	
 	ParseTree* addChild(TreeNode*);
 	ParseTree* addReqOp(std::string, int);
+	bool checkAddressing(std::list<std::string> list, std::string addressing);
 };
 
 #endif /* PARSETREE_H */
