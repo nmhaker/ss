@@ -5,6 +5,8 @@
 #include "../include/parsetree.h"
 #include "../include/symtable.h"
 
+#include <string>
+
 class Assembler{
 
 public:
@@ -17,10 +19,21 @@ private:
 
 	SymTable* st;
 
-	void firstPass(int);
-	void secondPass(int);
+	bool firstPass(int);
+	bool secondPass(int);
 
 	void assemble();
+
+	//	First pass state variables
+	int lc;		//	Location Counter	
+	bool inside_section;	//	To check if inside section for error parsing
+	bool first_pass_completed;	//	To track if first pass has completed fully
+	bool end_directive_reached; //	To stop parsing 
+
+	std::string current_section;
+
+	std::list<std::string> passed_sections;
+
 };
 
 #endif

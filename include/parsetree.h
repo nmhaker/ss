@@ -36,7 +36,7 @@ private:
 	
 	int size;
 	
-	std::string getInstructionField(std::list<std::string>,std::string);
+	static std::string getInstructionField(std::list<std::string>,std::string);
 	bool checkAddressing(std::list<std::string> list, std::string addressing);
 	
 	void populateTree();

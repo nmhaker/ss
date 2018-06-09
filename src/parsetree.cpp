@@ -106,10 +106,23 @@ void ParseTree::populateTree() {
 	tn_skip_s->addChild(tn_skip_k);
 	tn_skip_k->addChild(tn_skip_i);
 	tn_skip_i->addChild(tn_skip_p);
+	TreeNode* tn_rodata_r = new TreeNode('r', Symbol);
+	TreeNode* tn_rodata_o = new TreeNode('o', Symbol);
+	TreeNode* tn_rodata_d = new TreeNode('d', Symbol);
+	TreeNode* tn_rodata_a = new TreeNode('a', Symbol);
+	TreeNode* tn_rodata_t = new TreeNode('t', Symbol);
+	TreeNode* tn_rodata_a2 = new TreeNode('a', Section, ".rodata");
+	tn_rodata_r->addChild(tn_rodata_o);
+	tn_rodata_o->addChild(tn_rodata_d);
+	tn_rodata_d->addChild(tn_rodata_a);
+	tn_rodata_a->addChild(tn_rodata_t);
+	tn_rodata_t->addChild(tn_rodata_a2);
+
 	tn_dot->addChild(tn_global_g);
 	tn_dot->addChild(tn_text_t);
 	tn_dot->addChild(tn_data_d);
 	tn_dot->addChild(tn_bss_b);
+	tn_dot->addChild(tn_rodata_r);
 	tn_dot->addChild(tn_end_e);
 	tn_dot->addChild(tn_char_c);
 	tn_dot->addChild(tn_word_w);
@@ -260,6 +273,7 @@ void ParseTree::populateTree() {
 	this->addReqOp(".text", 0);
 	this->addReqOp(".data", 0);
 	this->addReqOp(".bss", 0);
+	this->addReqOp(".rodata", 0);
 	this->addReqOp(".end", 0);
 	this->addReqOp("push", 1);
 	this->addReqOp("pop", 1);
@@ -291,8 +305,8 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	TreeNode* node = 0;
 	
 	list<string> instruction;
-	instruction.push_back("LINE_NUMBER");
-	instruction.push_back(to_string(lineNumber));
+	//instruction.push_back("LINE_NUMBER");
+	//instruction.push_back(to_string(lineNumber));
 	
 	string symbol;
 	string arithmetic;
@@ -313,7 +327,6 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	cout << endl << endl << flush;
 
 	for(unsigned i=0; i<line.size(); i++){	
-
 		
 		if(opcode_got && !check_condition){
 
@@ -925,7 +938,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 				}
 				if (i == line.size()) {
 					//	Local symbol
-					if (instruction.size() == 2) {
+					if (instruction.size() == 0) {
 						instruction.push_back("LABEL");
 					}
 					instruction.push_back(symbol);
@@ -936,7 +949,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					return false;
 				}else{
 					//	Local symbol
-					if (instruction.size() == 2) {
+					if (instruction.size() == 0) {
 						instruction.push_back("LABEL");
 					}
 					instruction.push_back(symbol);
@@ -946,7 +959,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 			}
 			if(line[i] == ':'){
 				//	Local symbol
-				if (instruction.size() == 2) {
+				if (instruction.size() == 0) {
 					instruction.push_back("LABEL");
 				}
 				instruction.push_back(symbol);
