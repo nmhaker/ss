@@ -204,20 +204,8 @@ bool Assembler::firstPass(int line) {
 						end_directive_reached = true;
 						return true;
 					} else if (*it == ".skip") {
-						it++;
-						if (it == instruction.end()) {
-							cout << "Error: skip instruction requires operand, at line: " << line << endl << flush;
-							return false;
-						}
-						if (*it != "IMMEDIATE") {
-							cout << "Error: only immediate operand type allowed, at line: " << line << endl << flush;
-							return false;
-						}
-						it++;
-						section_size += stoi(*it);
-						lc += stoi(*it);
-						return true;
-
+						cout << "Error: .skip directive not allowed in .rodata section, must have initializer, at line: " << line << endl << flush;
+						return false;
 					}else {
 						cout << "Error: not allowed directive " << *it << " at line: " << line << endl << flush;
 						return false;
