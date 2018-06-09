@@ -349,6 +349,12 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						return false;
 					}
 
+					if (isalpha(line[i])) {
+						instruction.push_back("SYMBOL");
+					} else if (isdigit(line[i])) {
+						instruction.push_back("CONST");
+					}
+
 					//	Get symbol till whitespace or comma
 					//	Carry out whitespace
 					while (!isspace(line[i]) && (line[i]!=',') && (i < line.size())) {
@@ -392,6 +398,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					//	Skip whitespace
 					while (isspace(line[i]) && (i < line.size())) i++;
 
+					if (i == line.size()) {
+						cout << "Error: operands expected , at line: " << lineNumber << endl << flush;
+						return false;
+					}
+
 					//	Memdir addressing;	
 					//	symbols starting with 'r' are redirected for later parsing in case that was regdir addressing or symbol memdir
 					if ( (isalpha(line[i]) || line[i] == '.') && (line[i]!='r') ) {
@@ -434,7 +445,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					}
 					//	Immediate addressing
 					else if (isdigit(line[i])) {
-	
+
 						if (!checkAddressing(instruction, "IMMEDIATE")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
 							return false;
@@ -914,7 +925,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					}
 					//	Unknown addressing required
 					else {
-						cout << "Error: unknown addressing required" << endl << flush;
+						cout << "Error: unknown addressing required, at line: " << lineNumber << endl << flush;
 						return false;
 					}
 					operands_counter++;

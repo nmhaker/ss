@@ -125,8 +125,6 @@ bool Assembler::firstPass(int line) {
 
 				inside_section = true;
 
-				
-
 				SymEntry *entry = 0;
 
 				if (*it == ".text" || *it == ".rodata" || *it==".bss") {
@@ -207,6 +205,14 @@ bool Assembler::firstPass(int line) {
 						return true;
 					} else if (*it == ".skip") {
 						it++;
+						if (it == instruction.end()) {
+							cout << "Error: skip instruction requires operand, at line: " << line << endl << flush;
+							return false;
+						}
+						if (*it != "IMMEDIATE") {
+							cout << "Error: only immediate operand type allowed, at line: " << line << endl << flush;
+							return false;
+						}
 						it++;
 						section_size += stoi(*it);
 						lc += stoi(*it);
@@ -248,7 +254,15 @@ bool Assembler::firstPass(int line) {
 						end_directive_reached = true;
 						return true;
 					} else if (*it == ".skip") {
-						it++;
+						it++; 
+						if (it == instruction.end()) {
+							cout << "Error: skip instruction requires operand, at line: " << line << endl << flush;
+							return false;
+						}
+						if (*it != "IMMEDIATE") {
+							cout << "Error: only immediate operand type allowed, at line: " << line << endl << flush;
+							return false;
+						}
 						it++;
 						section_size += stoi(*it);
 						lc += stoi(*it);
@@ -291,7 +305,15 @@ bool Assembler::firstPass(int line) {
 						end_directive_reached = true;
 						return true;
 					} else if (*it == ".skip") {
-						it++;
+						it++; 
+						if (it == instruction.end()) {
+							cout << "Error: skip instruction requires operand, at line: " << line << endl << flush;
+							return false;
+						}
+						if (*it != "IMMEDIATE") {
+							cout << "Error: only immediate operand type allowed, at line: " << line << endl << flush;
+							return false;
+						}
 						it++;
 
 						section_size += stoi(*it);

@@ -19,11 +19,10 @@ void SymTable::dumpTable() {
 	if (!final_entries.empty()) {
 		cout << "|   REDNI BROJ   |   IME   |   SEKCIJA   |   VREDNOST   |   VIDLJIVOST   |   VELICINA   |   PRAVA PRISTUPA   |" << endl;
 		cout << "|------------------------------------------------------------------------------------------------------------|" << endl;
-		cout << "|   0    |    /    |     UND     |      0h      |        L       |       0        |        /      |" << endl;
-		cout << "|------------------------------------------------------------------------------------------------------------|" << endl;
+		cout << " 0 / UND 0 L 0 / " << endl;
 		for (map<int, SymEntry*>::iterator it = final_entries.begin(); it != final_entries.end(); it++) {
 
-			cout << "|  " << it->first <<  "|  " << it->second->getName() << "  |  " << it->second->getSection() << "  |  " << it->second->getValue() << "  |  " << ((it->second->getLocality()==0) ? "Local" : "Global")  << "  |  "  << it->second->getSize() << "  |  " << it->second->getAccessRights() << "  |" << endl;
+			cout << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << it->second->getAccessRights() << " " << endl;
 
 		}
 	}
