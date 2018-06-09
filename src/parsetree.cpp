@@ -360,10 +360,12 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						i++;
 					}
 					
-					//	Add symbol to instruction
-					
-					instruction.push_back(symbol);
+					//	Add symbol to instruction					
+					if(!symbol.empty())
+						instruction.push_back(symbol);
 					symbol.clear();
+
+					while (isspace(line[i])  && (i < line.size())) i++;
 
 					if (i == line.size()) {
 						continue;

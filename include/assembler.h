@@ -26,6 +26,7 @@ private:
 
 	//	First pass state variables
 	int lc;		//	Location Counter	
+	int section_size; //  Location Counter but for section offset
 	bool inside_section;	//	To check if inside section for error parsing
 	bool first_pass_completed;	//	To track if first pass has completed fully
 	bool end_directive_reached; //	To stop parsing 

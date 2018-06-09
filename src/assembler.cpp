@@ -38,6 +38,7 @@ Assembler::Assembler(char* inputFileName){
 	st = new SymTable();
 
 	lc = 0;
+	section_size = 0;
 	inside_section = false;
 	first_pass_completed = true;
 	end_directive_reached = false;
@@ -69,6 +70,12 @@ void Assembler::assemble() {
 	}
 
 	if (first_pass_completed) {
+		
+		//	Update size of the last section
+		st->getEntry(current_section)->setSize(section_size);
+
+		//	Merge sections and symbols into final std::map
+		st->finalizeTable();
 
 		cout << endl << "FIRST PASS COMPLETED" << endl;
 		cout << endl << "Symbol Table:" << endl;
@@ -89,8 +96,6 @@ void Assembler::assemble() {
 bool Assembler::firstPass(int line) {
 
 	list<string> instruction = pt->getParsedInstruction(line);
-
-	int section_size = 0;
 
 	for (list<string>::const_iterator it = instruction.begin(); it != instruction.end(); it++) {
 		if ( !inside_section ) {
@@ -120,12 +125,7 @@ bool Assembler::firstPass(int line) {
 
 				inside_section = true;
 
-				SymEntry* entry_old = st->getEntry(*it);
-				if (entry_old != 0) {
-					entry_old->setSize(section_size);
-				}
-
-				section_size = 0;
+				
 
 				SymEntry *entry = 0;
 
@@ -137,7 +137,7 @@ bool Assembler::firstPass(int line) {
 				}
 
 
-				st->addEntry(entry);
+				st->addSectionEntry(entry);
 
 				current_section = *it;
 
@@ -160,7 +160,14 @@ bool Assembler::firstPass(int line) {
 					}
 				}
 
+				SymEntry* entry_old = st->getEntry(current_section);
+				if (entry_old != 0) {
+					entry_old->setSize(section_size);
+				}
+
 				current_section = *it;
+
+				section_size = 0;
 
 				SymEntry *entry = 0;
 				
@@ -170,7 +177,7 @@ bool Assembler::firstPass(int line) {
 					entry = new SymEntry(*it, *it, lc, Local, 0, READ_WRITE);
 				}
 
-				st->addEntry(entry);
+				st->addSectionEntry(entry);
 				passed_sections.push_back(*it);
 
 			//	Check for directive global rules
@@ -215,8 +222,17 @@ bool Assembler::firstPass(int line) {
 						counter++;
 						it++;
 					}
+					counter--;
+
+					//	Rodata section needs to have initializers
+					if (counter == 0) {
+						cout << "Error: .rodata needs to have initializers, at line: " << line << endl << flush;
+						return false;
+					}
+
 					lc += factor*counter;
 					section_size += factor*counter;
+					return true;
 					
 				} else if (current_section == ".bss") {
 					int factor = 1;
@@ -249,8 +265,19 @@ bool Assembler::firstPass(int line) {
 						counter++;
 						it++;
 					}
+					counter--;
+
+					//	Bss section should not contain initializers
+					if (counter > 0) {
+						cout << "Error: .bss section should not contain initializers, at line: " << line << endl << flush;
+						return false;
+					}
+
 					lc += factor*counter;
 					section_size += factor*counter;
+
+					return true;
+
 				} else {
 					int factor = 1;
 					if (*it == ".char") {
@@ -282,8 +309,11 @@ bool Assembler::firstPass(int line) {
 						counter++;
 						it++;
 					}
+					counter--;
+
 					lc += factor*counter;
 					section_size += factor*counter;
+					return true;
 				}
 
 			//	Parse label
@@ -293,19 +323,26 @@ bool Assembler::firstPass(int line) {
 				//	Create table entry
 				SymEntry *se = new SymEntry(*it, current_section, lc, Local, 0, NONE);
 				//	Add to table
-				st->addEntry(se);
+				st->addSymbolEntry(se);
 			//	All instructions are 2 bytes, if some operand is referencing memory or is immediate it will be added later
 			} else if (*it == "INSTRUCTION") {
 				lc += 2;
 				section_size += 2;
-			//	All addressing modes requires additional 2 bytes except regdir and ,,CONST'' which is appended in REGINDPOM addressing as special node; Simple condition, because all other types covered above, if !regdir then it is some other addressing type
-			} else if (*it != "REGDIR" && *it != "CONST") {
+				it++;
+			//	All addressing modes requires additional 2 bytes except regdir and need to skip helper symbols ,,CONST'' ,,CONDITION'' ,,SYMBOL'' 
+			} else if (*it != "REGDIR" && *it != "CONST" && *it != "CONDITION" && *it!="SYMBOL") {
 				lc += 2;
 				section_size += 2;
+				it++;
 			}
-			return true;
+			//	Otherwise it is not a type but rather name of some type, so just skip it
+			else {
+				it++;
+			}
 		}
-
+		//	For loop crashes when iterator pass end point
+		if (it == instruction.end())
+			break;
 	}
 	return true;
 }

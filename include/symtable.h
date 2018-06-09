@@ -15,13 +15,17 @@ public:
 
 	void dumpTable();
 
-	SymTable* addEntry(SymEntry*);
+	void finalizeTable();
+
+	SymTable* addSectionEntry(SymEntry*);
+	SymTable* addSymbolEntry(SymEntry*);
 	SymEntry* getEntry(int no);
 	SymEntry* getEntry(std::string name);
 
 private:
-	std::map<int, SymEntry*> entries;
-	
+	std::map<int, SymEntry*> section_entries;
+	std::map<int, SymEntry*> symbol_entries;
+	std::map<int, SymEntry*> final_entries;
 };
 
 #endif SYMTABLE_H
