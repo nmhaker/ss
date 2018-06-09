@@ -90,6 +90,8 @@ bool Assembler::firstPass(int line) {
 
 	list<string> instruction = pt->getParsedInstruction(line);
 
+	int section_size = 0;
+
 	for (list<string>::const_iterator it = instruction.begin(); it != instruction.end(); it++) {
 		if ( !inside_section ) {
 			if ((*it) == "DIRECTIVE") {
@@ -118,14 +120,22 @@ bool Assembler::firstPass(int line) {
 
 				inside_section = true;
 
+				SymEntry* entry_old = st->getEntry(*it);
+				if (entry_old != 0) {
+					entry_old->setSize(section_size);
+				}
+
+				section_size = 0;
+
 				SymEntry *entry = 0;
-				
+
 				if (*it == ".text" || *it == ".rodata" || *it==".bss") {
-					entry = new SymEntry(*it, *it, lc, Local, 0, READ);
+					entry = new SymEntry(*it, *it, lc, Local, section_size, READ);
 				}
 				else if (*it == ".data") {
-					entry = new SymEntry(*it, *it, lc, Local, 0, READ_WRITE);
+					entry = new SymEntry(*it, *it, lc, Local, section_size, READ_WRITE);
 				}
+
 
 				st->addEntry(entry);
 
@@ -163,6 +173,7 @@ bool Assembler::firstPass(int line) {
 				st->addEntry(entry);
 				passed_sections.push_back(*it);
 
+			//	Check for directive global rules
 			} else if (*it == "DIRECTIVE") {
 
 				it++;
@@ -177,20 +188,126 @@ bool Assembler::firstPass(int line) {
 						return true;	
 					}
 				} else if(current_section == ".rodata"){
+					int factor = 1;
+					if (*it == ".char") {
+						factor = 1;
+					} else if (*it == ".word") {
+						factor = 2;
+					} else if (*it == ".long") {
+						factor = 4;
+					} else if (*it == ".end") {
+						end_directive_reached = true;
+						return true;
+					} else if (*it == ".skip") {
+						it++;
+
+						//	NEED TO CONVERT STRING TO INTEGER AND ADD IT TO LC, FOR NOW ADD 1
+						section_size += 1;
+						lc += 1;
+						return true;
+
+					}else {
+						cout << "Error: not allowed directive " << *it << " at line: " << line << endl << flush;
+						return false;
+					}
+					int counter = 0;
+					while (it != instruction.end()) {
+						counter++;
+						it++;
+					}
+					lc += factor*counter;
+					section_size += factor*counter;
+					
 				} else if (current_section == ".bss") {
+					int factor = 1;
+					if (*it == ".char") {
+						factor = 1;
+					}
+					else if (*it == ".word") {
+						factor = 2;
+					}
+					else if (*it == ".long") {
+						factor = 4;
+					}
+					else if (*it == ".end") {
+						end_directive_reached = true;
+						return true;
+					} else if (*it == ".skip") {
+						it++;
+
+						//	NEED TO CONVERT STRING TO INTEGER AND ADD IT TO LC, FOR NOW ADD 1
+						section_size += 1;
+						lc += 1;
+						return true;
+
+					} else {
+						cout << "Error: not allowed directive " << *it << " at line: " << line << endl << flush;
+						return false;
+					}
+					int counter = 0;
+					while (it != instruction.end()) {
+						counter++;
+						it++;
+					}
+					lc += factor*counter;
+					section_size += factor*counter;
+				} else {
+					int factor = 1;
+					if (*it == ".char") {
+						factor = 1;
+					}
+					else if (*it == ".word") {
+						factor = 2;
+					}
+					else if (*it == ".long") {
+						factor = 4;
+					}
+					else if (*it == ".end") {
+						end_directive_reached = true;
+						return true;
+					} else if (*it == ".skip") {
+						it++;
+
+						//	NEED TO CONVERT STRING TO INTEGER AND ADD IT TO LC, FOR NOW ADD 1
+						section_size += 1;
+						lc += 1;
+						return true;
+
+					}else {
+						cout << "Error: not allowed directive " << *it << " at line: " << line << endl << flush;
+						return false;
+					}
+					int counter = 0;
+					while (it != instruction.end()) {
+						counter++;
+						it++;
+					}
+					lc += factor*counter;
+					section_size += factor*counter;
 				}
 
-			//	Need to parse this label
+			//	Parse label
 			} else if (*it == "LABEL") {
-				cout << " FP LABEL" << endl << flush;
+				//	Skip to label name
+				it++;
+				//	Create table entry
+				SymEntry *se = new SymEntry(*it, current_section, lc, Local, 0, NONE);
+				//	Add to table
+				st->addEntry(se);
+			//	All instructions are 2 bytes, if some operand is referencing memory or is immediate it will be added later
 			} else if (*it == "INSTRUCTION") {
-				cout << " FP INSTRUCTION" << endl << flush;
+				lc += 2;
+				section_size += 2;
+			//	All addressing modes requires additional 2 bytes except regdir and ,,CONST'' which is appended in REGINDPOM addressing as special node; Simple condition, because all other types covered above, if !regdir then it is some other addressing type
+			} else if (*it != "REGDIR" && *it != "CONST") {
+				lc += 2;
+				section_size += 2;
 			}
-
 			return true;
 		}
 
 	}
+	return true;
 }
 
 bool Assembler::secondPass(int line) {

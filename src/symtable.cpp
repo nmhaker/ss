@@ -40,3 +40,13 @@ SymEntry* SymTable::getEntry(int no)
 {
 	return entries.at(no);
 }
+
+SymEntry * SymTable::getEntry(std::string name)
+{
+	for (map<int, SymEntry*>::iterator it = entries.begin(); it != entries.end(); it++) {
+		if (it->second->getName() == name) {
+			return it->second;
+		}
+	}
+	return 0;
+}

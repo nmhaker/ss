@@ -9,6 +9,7 @@ enum Locality {
 };
 
 enum AccessRights {
+	NONE,
 	READ,
 	WRITE,
 	READ_WRITE

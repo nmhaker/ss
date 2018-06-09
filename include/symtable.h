@@ -17,6 +17,7 @@ public:
 
 	SymTable* addEntry(SymEntry*);
 	SymEntry* getEntry(int no);
+	SymEntry* getEntry(std::string name);
 
 private:
 	std::map<int, SymEntry*> entries;
