@@ -31,9 +31,14 @@ void SymTable::dumpTable() {
 	}
 }
 
-void SymTable::finalizeTable()
+void SymTable::finalizeTable(bool secondPass)
 {
+
 	int counter = 1;
+
+	if (secondPass)
+		counter = final_entries.size()+1;
+
 	for (map<int, SymEntry*>::const_iterator it = section_entries.begin(); it != section_entries.end(); it++) {
 		final_entries.insert(pair<int, SymEntry*>(counter, it->second));
 		counter++;
@@ -42,6 +47,8 @@ void SymTable::finalizeTable()
 		final_entries.insert(pair<int, SymEntry*>(counter, it->second));
 		counter++;
 	}
+	section_entries.clear();
+	symbol_entries.clear();
 }
 
 SymTable* SymTable::addSectionEntry(SymEntry *entry)

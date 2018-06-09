@@ -75,7 +75,7 @@ void Assembler::assemble() {
 		st->getEntry(current_section)->setSize(section_size);
 
 		//	Merge sections and symbols into final std::map
-		st->finalizeTable();
+		st->finalizeTable(false);
 
 		cout << endl << "FIRST PASS COMPLETED" << endl;
 		cout << endl << "Symbol Table:" << endl;
@@ -88,6 +88,8 @@ void Assembler::assemble() {
 
 		cout << endl << "SECOND PASS COMPLETED" << endl;
 		cout << endl << "Symbol Table:" << endl;
+
+		st->finalizeTable(true);
 
 		st->dumpTable();
 	}
@@ -360,6 +362,37 @@ bool Assembler::firstPass(int line) {
 }
 
 bool Assembler::secondPass(int line) {
+
+	//	Get instruction at line
 	list<string> instruction = pt->getParsedInstruction(line);
-	return false;
+
+	//	Handle parsed instruction
+	for (list<string>::const_iterator it = instruction.begin(); it != instruction.end(); it++) {
+		if (*it == "DIRECTIVE") {
+			//	Next -> name of directive
+			it++;
+
+			if (*it == ".global") {
+				//	Next -> operand type
+				it++;
+				while (it != instruction.end()) {
+					//	Next -> actual symbol
+					it++;
+					SymEntry* se = st->getEntry(*it);
+					if(se !=0)
+						se->setLocality(Global);
+					else {
+						se = new SymEntry(*it, "UNDEFINED", 0, Global, 0, NONE);
+					}
+					st->addSymbolEntry(se);
+					//	Next -> operand type if exists otherwis it=instruction.end()
+					it++;
+				}
+			}
+		}
+
+		if (it == instruction.end())
+			break;
+	}
+	return true;
 }

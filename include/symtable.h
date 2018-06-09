@@ -15,7 +15,7 @@ public:
 
 	void dumpTable();
 
-	void finalizeTable();
+	void finalizeTable(bool);
 
 	SymTable* addSectionEntry(SymEntry*);
 	SymTable* addSymbolEntry(SymEntry*);
