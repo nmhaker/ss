@@ -207,10 +207,9 @@ bool Assembler::firstPass(int line) {
 						return true;
 					} else if (*it == ".skip") {
 						it++;
-
-						//	NEED TO CONVERT STRING TO INTEGER AND ADD IT TO LC, FOR NOW ADD 1
-						section_size += 1;
-						lc += 1;
+						it++;
+						section_size += stoi(*it);
+						lc += stoi(*it);
 						return true;
 
 					}else {
@@ -250,10 +249,9 @@ bool Assembler::firstPass(int line) {
 						return true;
 					} else if (*it == ".skip") {
 						it++;
-
-						//	NEED TO CONVERT STRING TO INTEGER AND ADD IT TO LC, FOR NOW ADD 1
-						section_size += 1;
-						lc += 1;
+						it++;
+						section_size += stoi(*it);
+						lc += stoi(*it);
 						return true;
 
 					} else {
@@ -294,10 +292,10 @@ bool Assembler::firstPass(int line) {
 						return true;
 					} else if (*it == ".skip") {
 						it++;
+						it++;
 
-						//	NEED TO CONVERT STRING TO INTEGER AND ADD IT TO LC, FOR NOW ADD 1
-						section_size += 1;
-						lc += 1;
+						section_size += stoi(*it);
+						lc += stoi(*it);
 						return true;
 
 					}else {
