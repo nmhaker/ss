@@ -346,6 +346,10 @@ bool Assembler::firstPass(int line) {
 				st->addSymbolEntry(se);
 			//	All instructions are 2 bytes, if some operand is referencing memory or is immediate it will be added later
 			} else if (*it == "INSTRUCTION") {
+				if (current_section != ".text") {
+					cout << "Error: instructions allowed only in .text section, at line: " << line << endl << flush;
+					return false;
+				}
 				lc += 2;
 				section_size += 2;
 				it++;
