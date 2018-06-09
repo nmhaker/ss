@@ -281,9 +281,6 @@ void ParseTree::populateTree() {
 	this->addReqOp("jmp", 1);
 	this->addReqOp(".skip", 1);
 	this->addReqOp(".align", 1);
-	this->addReqOp(".char", 1);
-	this->addReqOp(".word", 1);
-	this->addReqOp(".long", 1);
 	this->addReqOp("add", 2);
 	this->addReqOp("sub", 2);
 	this->addReqOp("mul", 2);
@@ -297,7 +294,9 @@ void ParseTree::populateTree() {
 	this->addReqOp("shl", 2);
 	this->addReqOp("shr", 2);
 	this->addReqOp(".global", 3); // 3 means variable operand length
-	
+	this->addReqOp(".char", 3);
+	this->addReqOp(".word", 3);
+	this->addReqOp(".long", 3);
 }
 
 bool ParseTree::parse(std::string line, int lineNumber) {
@@ -330,7 +329,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 		
 		if(opcode_got && !check_condition){
 
-			// Got .global directive
+			// Got variable length operand directive
 			if (operands_expected == 3) {
 
 				//	Whitespace expected
@@ -345,7 +344,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					while (isspace(line[i]) && (i < line.size())) i++;
 
 					//	If not letter then error
-					if (!isalpha(line[i])) {
+					if (!isalpha(line[i]) && getInstructionField(instruction, "DIRECTIVE")==".global") {
 						cout << "Error alphabet character expected for symbol" << endl << flush;
 						return false;
 					}
@@ -353,7 +352,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					//	Get symbol till whitespace or comma
 					//	Carry out whitespace
 					while (!isspace(line[i]) && (line[i]!=',') && (i < line.size())) {
-						if (!isalnum(line[i])) {
+						if (!isalnum(line[i]) && !(line[i]=='.'&&getInstructionField(instruction, "DIRECTIVE")!=".global")) {
 							cout << "Error: wrong symbol name at line: " << lineNumber << endl << flush;
 							return false;
 						}

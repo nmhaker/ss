@@ -138,8 +138,7 @@ bool Assembler::firstPass(int line) {
 				cout << "Error: unexpected " << (*it) << " , at line: " << line << endl << flush;
 				return false;
 			}
-		}
-		else {
+		} else {
 
 			//	Check for multiple definition of same section
 			if (*it == "SECTION") {
@@ -164,24 +163,33 @@ bool Assembler::firstPass(int line) {
 				st->addEntry(entry);
 				passed_sections.push_back(*it);
 
-			}
-			else if (*it == "DIRECTIVE") {
+			} else if (*it == "DIRECTIVE") {
+
 				it++;
+
 				//	Check for bad directives in text section
 				if (current_section == ".text") {
-					if (*it == ".align" || *it == ".char" || *it == ".word" || *it == ".long" || *it == ".skip") {
+					if (*it != ".end"){
 						cout << "Error: directive " << *it << " forbidden in text section" << endl << flush;
 						return false;
+					} else {
+						end_directive_reached = true;	 //	Marks first pass as completed
+						return true;	
 					}
+				} else if(current_section == ".rodata"){
+				} else if (current_section == ".bss") {
 				}
-				else {
-					if()
-				}
+
+			//	Need to parse this label
+			} else if (*it == "LABEL") {
+				cout << " FP LABEL" << endl << flush;
+			} else if (*it == "INSTRUCTION") {
+				cout << " FP INSTRUCTION" << endl << flush;
 			}
 
-			cout << "UNUTAR SEKCIJE" << endl << flush;
 			return true;
 		}
+
 	}
 }
 
