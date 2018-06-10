@@ -28,6 +28,8 @@ public:
 	bool parse(std::string line, int lineNumber);
 	std::list<std::string> getParsedInstruction(int line);
 
+	static std::string getInstructionField(std::list<std::string>,std::string);
+
 private:
 	std::map<char, TreeNode*> root;
 	std::map<std::string, int> req_op;
@@ -36,7 +38,6 @@ private:
 	
 	int size;
 	
-	static std::string getInstructionField(std::list<std::string>,std::string);
 	bool checkAddressing(std::list<std::string> list, std::string addressing);
 	
 	void populateTree();

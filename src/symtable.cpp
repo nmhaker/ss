@@ -22,11 +22,18 @@ void SymTable::dumpTable() {
 		cout << " 0 / UND 0 L 0 / " << endl;
 		for (map<int, SymEntry*>::iterator it = final_entries.begin(); it != final_entries.end(); it++) {
 
-			cout << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << it->second->getAccessRights() << " " << endl;
+			string accessrights;
+			switch (it->second->getAccessRights()) {
+			case NONE: accessrights = "NONE"; break;
+			case READ: accessrights = "READ"; break;
+			case WRITE: accessrights = "WRITE"; break;
+			case READ_WRITE: accessrights = "READ_WRITE"; break;
+			}
+
+			cout << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << accessrights << " " << endl;
 
 		}
-	}
-	else {
+	} else {
 		cout << "Prazna tabela simbola" << endl << flush;
 	}
 }
@@ -80,5 +87,10 @@ SymEntry * SymTable::getEntry(std::string name)
 			return it->second;
 		}
 	}	
+	for (map<int, SymEntry*>::iterator it = final_entries.begin(); it != final_entries.end(); it++) {
+		if (it->second->getName() == name) {
+			return it->second;
+		}
+	}
 	return 0;
 }

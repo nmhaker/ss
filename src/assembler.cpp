@@ -43,6 +43,10 @@ Assembler::Assembler(char* inputFileName){
 	first_pass_completed = true;
 	end_directive_reached = false;
 
+	text_bytes = 0;
+	data_bytes = 0;
+	rodata_bytes = 0;
+
 	assemble();
 }
 
@@ -56,21 +60,27 @@ void Assembler::assemble() {
 
 	pt = new ParseTree();
 
-	//	First pass
+	//	First pass, go through all read lines from the file
 	for(int i=1; i<=lines->getSize(); i++){
+		//	Do first pass of line, if successfully parsed 
 		if(pt->parse(lines->getLine(i), i)){
+			//	First pass
 			if (!firstPass(i)) {
 				first_pass_completed = false;
 				break;
 			}
+			//	If .end directive reached stop parsing first pass
+			if (end_directive_reached)
+				break;
 		}else{
 			first_pass_completed = false;
 			break;
 		}
 	}
 
+	//	Proceed to second pass after successfully completed first pass
 	if (first_pass_completed) {
-		
+
 		//	Update size of the last section
 		st->getEntry(current_section)->setSize(section_size);
 
@@ -79,20 +89,110 @@ void Assembler::assemble() {
 
 		cout << endl << "FIRST PASS COMPLETED" << endl;
 		cout << endl << "Symbol Table:" << endl;
+
+		//	Print symbol table
 		st->dumpTable();
+
+		//	For second parse the same, reset needed
+		lc = 0;
+		section_size = 0;
+		inside_section = false;
+		end_directive_reached = false;
+		current_section.clear();
+		passed_sections.clear();
+
+		//	Prepare byte buffers for storing section bytes
+		SymEntry* entry = st->getEntry(".text");
+		if (entry != 0) {
+			size_of_text = entry->getSize();
+			text_bytes = new char[size_of_text];
+		}
+		entry = st->getEntry(".data");
+		if (entry != 0) {
+			size_of_data = entry->getSize();
+			data_bytes = new char[size_of_data];
+		}
+		entry = st->getEntry(".rodata");
+		if (entry != 0) {
+			size_of_rodata = entry->getSize();
+			rodata_bytes = new char[size_of_rodata];
+		}
 
 		//	Second pass
 		for (int i = 1; i < lines->getSize(); i++) {
-			secondPass(i);
+			//	Parse till the .end directive
+			if(!end_directive_reached)
+				secondPass(i);
 		}
 
 		cout << endl << "SECOND PASS COMPLETED" << endl;
 		cout << endl << "Symbol Table:" << endl;
 
+		//	Add new global symbols that were not used but defined as extern that is global
 		st->finalizeTable(true);
 
+		//	Print symbol table
 		st->dumpTable();
 	}
+}
+
+unsigned char Assembler::makeFirstByte(int condition, int opcode, int addressing)
+{
+	if (condition > 3 || condition < 0 || opcode > 15 || opcode < 0 || addressing < 0 || addressing > 3) {
+		cout << "Error: wrong opcode" << endl << flush;
+		exit(1);
+	}
+
+	char firstByte = 0;
+
+	condition <<= 6;
+	opcode <<= 2;
+	//	addressing is rightmost two bits so its ok
+
+	firstByte |= condition;
+	firstByte |= opcode;
+	firstByte |= addressing;
+
+	return firstByte;
+}
+
+unsigned char Assembler::makeSecondByte(int dst, int addressing, int src)
+{
+	if (dst > 7 || dst < 0 || src > 7 || src < 0 || addressing < 0 || addressing > 3) {
+		cout << "Error: wrong opcode" << endl << flush;
+		exit(1);
+	}
+
+	char secondByte = 0;
+
+	dst <<= 5;
+	addressing <<= 2;
+	//	src is rightmost two bits so its ok
+
+	secondByte |= dst;
+	secondByte |= addressing;
+	secondByte |= src;
+
+	return secondByte;
+}
+
+void Assembler::makeAdditionalTwoBytes(char * src, int value)
+{
+	if (src != 0) {
+		int mask_lower = 255;
+		int mask_higher = mask_lower << 8;
+
+		src[0] = value & mask_lower;
+		src[1] = value & mask_higher;
+	}
+	else {
+		cout << "Error: passed null pointer char as src string of bytes" << endl << flush;
+	}
+}
+
+void Assembler::printByteToHex(char byte)
+{
+	cout << hex << (unsigned short) byte;
 }
 
 bool Assembler::firstPass(int line) {
@@ -135,7 +235,6 @@ bool Assembler::firstPass(int line) {
 				else if (*it == ".data") {
 					entry = new SymEntry(*it, *it, lc, Local, section_size, READ_WRITE);
 				}
-
 
 				st->addSectionEntry(entry);
 
@@ -292,6 +391,7 @@ bool Assembler::firstPass(int line) {
 						factor = 4;
 					}
 					else if (*it == ".end") {
+			
 						end_directive_reached = true;
 						return true;
 					} else if (*it == ".skip") {
@@ -369,6 +469,7 @@ bool Assembler::secondPass(int line) {
 	//	Handle parsed instruction
 	for (list<string>::const_iterator it = instruction.begin(); it != instruction.end(); it++) {
 		if (*it == "DIRECTIVE") {
+
 			//	Next -> name of directive
 			it++;
 
@@ -383,12 +484,61 @@ bool Assembler::secondPass(int line) {
 						se->setLocality(Global);
 					else {
 						se = new SymEntry(*it, "UNDEFINED", 0, Global, 0, NONE);
+						st->addSymbolEntry(se);
 					}
-					st->addSymbolEntry(se);
 					//	Next -> operand type if exists otherwis it=instruction.end()
 					it++;
 				}
 			}
+			//	Stop parsing when .end directive reached
+			else if (*it == ".end") {
+				end_directive_reached = true;
+				return true;
+			} else if (*it == ".align") {
+				cout << "Error: directive not supported yet" << endl << flush;
+				return false;
+			} else if (*it == ".long") {
+			} else if (*it == ".word") {
+			} else if (*it == ".char") {
+			}
+
+			break;
+		} else if (*it == "SECTION") {
+
+			//	Skip to next token
+			it++;
+
+			//	Update current section
+			current_section = *it;
+			//	Reset section size counter == offset into current section
+			section_size = 0;
+
+			break;
+
+		} else if (*it == "INSTRUCTION") {
+
+			//	Skip to next token
+			it++;
+
+			//	Check for condition
+			string condition = ParseTree::getInstructionField(instruction, "CONDITION");
+			if (!condition.empty()) {
+				cout << "Ima uslov: " << condition << ", at line: " << line << endl << flush;
+			}
+			else {
+				cout << "Nema uslov, at line: " << line << endl << flush;
+			}
+
+			break;
+
+		} else if (*it == "LABEL") {
+
+			//	Skip label token
+			it++;
+
+		} else {
+			cout << "Token of this type shouldnt appear here" << endl << flush;
+			return false;
 		}
 
 		if (it == instruction.end())

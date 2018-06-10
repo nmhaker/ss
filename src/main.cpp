@@ -30,6 +30,7 @@ int main(int argc, char** argv){
 				break;
 			}
 		}else{
+
 			Assembler *assembler = 0;
 
 			if(argc <= 1){
