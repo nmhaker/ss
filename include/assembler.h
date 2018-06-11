@@ -17,8 +17,8 @@ public:
 	static unsigned char makeFirstByte(int condition, int opcode, int addressing);
 	static unsigned char makeSecondByte(int dst, int addressing, int src);
 	static void makeAdditionalTwoBytes(char* src, int value);
-	static void printByteToHex(char byte);
-	static void dumpSectionBytes(char* section, int size);
+	static void printByteToHex(unsigned char byte);
+	static void dumpSectionBytes(char* section, int size, int startingPosition);
 
 private:
 	Array *lines;	 
@@ -40,6 +40,7 @@ private:
 	int current_size_of_rodata;
 
 	char* getCurrentBytePointer();
+	RelTable* getCurrentRelSection();
 	int& getCurrentSectionSize();
 
 

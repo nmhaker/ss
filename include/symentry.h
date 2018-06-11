@@ -18,7 +18,7 @@ enum AccessRights {
 class SymEntry {
 public:
 
-	SymEntry(std::string name, std::string section, int value, Locality locality, int size, AccessRights ar);
+	SymEntry(std::string name, std::string section, int value, Locality locality, int size, AccessRights ar, int no = 0);
 	~SymEntry();
 
 	void setName(std::string name);
@@ -27,6 +27,7 @@ public:
 	void setLocality(Locality locality);
 	void setSize(int size);
 	void setAccessRights(AccessRights ar);
+	void setNo(int no);
 	
 	std::string getName();
 	std::string getSection();
@@ -34,6 +35,7 @@ public:
 	Locality getLocality();
 	int getSize();
 	AccessRights getAccessRights();
+	int getNo();
 
 private:
 
@@ -43,6 +45,7 @@ private:
 	Locality locality;
 	int size;
 	AccessRights accessRights;
+	int no;
 	
 };
 

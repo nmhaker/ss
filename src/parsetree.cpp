@@ -356,6 +356,8 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						instruction.push_back("SYMBOL");
 					} else if (isdigit(line[i])) {
 						instruction.push_back("CONST");
+					} else if (line[i] == '.') {
+						instruction.push_back("SECTION");
 					}
 
 					//	Get symbol till whitespace or comma
@@ -1046,7 +1048,8 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						operands_expected = req_op.at(node->getValue());
 					}
 					catch (out_of_range e) {
-						operands_expected = req_op.at(instruction.back());
+						if(!instruction.empty())
+							operands_expected = req_op.at(instruction.back());
 					}
 
 					//	Legal instruction so add it

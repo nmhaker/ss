@@ -1,6 +1,6 @@
 #include "../include/symentry.h"
 
-SymEntry::SymEntry(std::string name, std::string section, int value, Locality locality, int size, AccessRights ar)
+SymEntry::SymEntry(std::string name, std::string section, int value, Locality locality, int size, AccessRights ar, int no)
 {
 	this->name = name;
 	this->section = section;
@@ -8,6 +8,7 @@ SymEntry::SymEntry(std::string name, std::string section, int value, Locality lo
 	this->locality = locality;
 	this->size = size;
 	this->accessRights = ar;
+	this->no = no;
 }
 
 SymEntry::~SymEntry()
@@ -44,6 +45,11 @@ void SymEntry::setAccessRights(AccessRights ar)
 	this->accessRights = ar;
 }
 
+void SymEntry::setNo(int no)
+{
+	this->no = no;
+}
+
 std::string SymEntry::getName()
 {
 	return this->name;
@@ -72,4 +78,9 @@ int SymEntry::getSize()
 AccessRights SymEntry::getAccessRights()
 {
 	return this->accessRights;
+}
+
+int SymEntry::getNo()
+{
+	return this->no;
 }

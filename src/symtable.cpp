@@ -29,9 +29,9 @@ void SymTable::dumpTable() {
 			case READ_WRITE: accessrights = "READ_WRITE"; break;
 			}
 
-			cout << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << accessrights << " " << endl;
-
+			cout << hex << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << accessrights << " " << endl;
 		}
+		cout << endl << flush;
 	} else {
 		cout << "Prazna tabela simbola" << endl << flush;
 	}
@@ -47,10 +47,12 @@ void SymTable::finalizeTable(bool secondPass)
 
 	for (map<int, SymEntry*>::const_iterator it = section_entries.begin(); it != section_entries.end(); it++) {
 		final_entries.insert(pair<int, SymEntry*>(counter, it->second));
+		it->second->setNo(counter);
 		counter++;
 	}
 	for (map<int, SymEntry*>::const_iterator it = symbol_entries.begin(); it != symbol_entries.end(); it++) {
 		final_entries.insert(pair<int, SymEntry*>(counter, it->second));
+		it->second->setNo(counter);
 		counter++;
 	}
 	section_entries.clear();

@@ -1,6 +1,7 @@
 #include "../include/assembler.h"
 #include "../include/array.h"
 #include "../include/parsetree.h"
+#include "../include/relentry.h"
 
 #include <iostream>
 #include <fstream>
@@ -53,14 +54,18 @@ Assembler::Assembler(char* inputFileName){
 	current_size_of_data = 0;
 	current_size_of_rodata = 0;
 
+	ret_text = new RelTable();
+	ret_data = new RelTable();
+	ret_rodata = new RelTable();
+
 	assemble();
 
-	cout << "Bytes of text section" << endl << flush;
-	dumpSectionBytes(text_bytes, size_of_text);
+	cout << endl << "Bytes of text section" << endl << flush;
+	dumpSectionBytes(text_bytes, size_of_text, -1);
 	cout << endl << "Bytes of data section" << endl << flush;
-	dumpSectionBytes(data_bytes, size_of_data);
+	dumpSectionBytes(data_bytes, size_of_data, -1);
 	cout << endl << "Bytes of rodata section" << endl << flush;
-	dumpSectionBytes(rodata_bytes, size_of_rodata);
+	dumpSectionBytes(rodata_bytes, size_of_rodata, -1);
 
 }
 
@@ -236,20 +241,30 @@ void Assembler::makeAdditionalTwoBytes(char * src, int value)
 	}
 }
 
-void Assembler::printByteToHex(char byte)
+void Assembler::printByteToHex(unsigned char byte)
 {
+	if (byte >= 0 && byte < 10)
+		cout << "0";
 	cout << hex << (unsigned short) byte;
 }
 
-void Assembler::dumpSectionBytes(char * section, int size)
+void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 {
-	cout << endl << flush;
-	if (section != 0 && size > 0) {
-		for (int i = 0; i < size; i++) {
-			printByteToHex(section[i]);
+	if (startingPosition == -1) {
+		if (section != 0 && size > 0) {
+			for (int i = 0; i < size; i++) {
+				printByteToHex(section[i]);
+			}
 		}
 	}
-	cout << endl << flush;
+	else {
+		if (section != 0 && size > 0) {
+			for (int i = startingPosition; i < size; i++) {
+				printByteToHex(section[i]);
+			}
+			cout << " " << flush;
+		}
+	}
 }
 
 char * Assembler::getCurrentBytePointer()
@@ -263,6 +278,18 @@ char * Assembler::getCurrentBytePointer()
 	else {
 		return 0;
 	}
+}
+
+RelTable * Assembler::getCurrentRelSection()
+{
+	if (current_section == ".text")
+		return ret_text;
+	else if (current_section == ".data")
+		return ret_data;
+	else if (current_section == ".rodata")
+		return ret_rodata;
+	else 
+		return 0;
 }
 
 int& Assembler::getCurrentSectionSize()
@@ -560,6 +587,11 @@ bool Assembler::secondPass(int line) {
 		if ( (current_section == ".bss") && (*it != "SECTION"))
 			return true;
 
+		RelocationType relocation_type = R_386_32;
+
+		string mem_operand;
+		mem_operand.clear();
+
 		if (*it == "DIRECTIVE") {
 
 			//	Next -> name of directive
@@ -628,20 +660,24 @@ bool Assembler::secondPass(int line) {
 							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 16);
 							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 24);
 
-							cout << "BYTES FROM " << current_section << endl << flush;
-							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+							//cout << "BYTES FROM " << current_section << endl << flush;
+							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-4);
 
 							it++;
 						}
 						else {
-							cout << "Memdir not yet implemented" << endl << flush;
-							return true;
+							//	MEMDIR
+							it++;
+
+							mem_operand = *it;
+
+							it++;
 						}
 					}
 				}
 				else {
 					getCurrentSectionSize() += 4;
-					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize() - 4);
 				}
 
 			} else if (*it == ".word") {
@@ -662,20 +698,21 @@ bool Assembler::secondPass(int line) {
 							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), num);
 							getCurrentSectionSize() += 2;
 
-							cout << "BYTES FROM " << current_section << endl << flush;
-							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+							//cout << "BYTES FROM " << current_section << endl << flush;
+							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-2);
 							
 							it++;
 						}
 						else {
-							cout << "Memdir not yet implemented" << endl << flush;
-							return true;
+							it++;
+
+							mem_operand = *it;
 						}
 					}
 				}
 				else {
 					getCurrentSectionSize() += 2;
-					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-2);
 				}
 			} else if (*it == ".char") {
 				//	Skip to next token
@@ -695,22 +732,22 @@ bool Assembler::secondPass(int line) {
 							//	Add to section
 							getCurrentBytePointer()[getCurrentSectionSize()++] = num;
 
-							cout << "BYTES FROM " << current_section << endl << flush;
-							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+							//cout << "BYTES FROM " << current_section << endl << flush;
+							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-1);
 
 							it++;
 						}
 						else {
-							cout << "Memdir not yet implemented" << endl << flush;
-							return true;
+							it++;
+
+							mem_operand = *it;
 						}
 					}
 				}
 				else {
 					getCurrentSectionSize()++;
-					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-1);
 				}
-
 			}
 
 			break;
@@ -730,9 +767,25 @@ bool Assembler::secondPass(int line) {
 			it++;
 
 			string instruction_string = *it;
+			int condition_opcode = 3;
 
+			int expected_operands = pt->getReqOp(instruction_string);
+			int parsed_operands = 0;
+
+			int dst_addressing = 0;
+			int dst = 0;
+			int src_addressing = 0;
+			int src = 0;
+			int pom = 0;
+
+			int tmp_addressing = 0;
+			int tmp_src_dst = 0;
+
+			bool has_additional_two_bytes = false;
 			//	Parse instruction opcode
 			int instruction_opcode = 0; 
+
+			bool jmp_instruction = false;
 
 			if (*it == "add")
 				instruction_opcode = 0;
@@ -767,12 +820,13 @@ bool Assembler::secondPass(int line) {
 			else if (*it == "shr")
 				instruction_opcode = 15;
 			else if (*it == "jmp") {
-				cout << "jmp not yet implemented, at line: " << line << endl << flush;
-				return true;
+				relocation_type = R_386_PC32;
+				instruction_opcode = 0;	//	ADD
 			}
 			else if (*it == "ret") {
-				cout << "ret not yet implemented, at line: " << line << endl << flush; 
-				return true;
+				instruction_opcode = 10;
+				dst_addressing = 1;
+				dst = 7;
 			}else {
 				cout << "Error: unknown instruction, at line: " << line << endl << flush;
 				return false;
@@ -781,21 +835,7 @@ bool Assembler::secondPass(int line) {
 			//	Skip to next token
 			it++;
 
-			int condition_opcode = 3;
 
-			int expected_operands = pt->getReqOp(instruction_string);
-			int parsed_operands = 0;
-
-			int dst_addressing = 0;
-			int dst = 0;
-			int src_addressing = 0;
-			int src = 0;
-			int pom = 0;
-
-			int tmp_addressing = 0;
-			int tmp_src_dst = 0;
-
-			bool has_additional_two_bytes = false;
 
 			while (it != instruction.end() && parsed_operands != expected_operands) {
 
@@ -873,20 +913,24 @@ bool Assembler::secondPass(int line) {
 						pom = stoi(*it);
 					}
 					else if(*it == "SYMBOL") {
-						cout << "Error: getting address of label not yet implemented" << endl << flush;
-						return false;
+						it++;
+						mem_operand = *it;
+						relocation_type = R_386_32;
 					}
 
 				}
 				else if (*it == "MEMDIR") {
+
+					it++;
+
 					tmp_addressing = 2;
 					has_additional_two_bytes = true;
 
-					cout << "Error: getting address of label not yet implemented" << endl << flush;
-					return false;
+					mem_operand = *it;
+
 				}
 				else if (*it == "MEMDIRIMMED") {
-					tmp_addressing = 2;
+					tmp_addressing = 2; // MEMDIR
 					has_additional_two_bytes = true;
 
 					it++;
@@ -894,12 +938,19 @@ bool Assembler::secondPass(int line) {
 					pom = stoi(*it);
 				}
 				else if (*it == "REFERENCE") {
-					cout << "Error: getting address of label not yet implemented" << endl << flush;
-					return false;
+					it++;
+					mem_operand = *it;
+
+					tmp_addressing = 0; // IMMED
+					has_additional_two_bytes = true;
 				}
 				else if (*it == "PCRELPOM") {
-					cout << "Error: getting address of label not yet implemented" << endl << flush;
-					return false;
+					it++;
+					mem_operand = *it;
+					
+					tmp_addressing = 3;
+					tmp_src_dst = 7;
+					has_additional_two_bytes = true;
 				}
 				else if (*it == "IMMEDIATE") {
 					tmp_addressing = 0;
@@ -938,9 +989,111 @@ bool Assembler::secondPass(int line) {
 			getCurrentBytePointer()[ getCurrentSectionSize()++ ] = secondByte;
 
 			if (has_additional_two_bytes) {
-				makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), pom);
-				getCurrentSectionSize() += 2;
+
+				if (mem_operand.empty()) {
+
+					makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), pom);
+					getCurrentSectionSize() += 2;
+
+				} else {
+
+					SymEntry* symbol = st->getEntry(mem_operand);
+
+					if (symbol != 0) {
+
+						if (relocation_type == R_386_32) {
+
+							//	Symbol is global and undefined
+							if (symbol->getSection() == "UNDEFINED") {
+
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+								
+								getCurrentRelSection()->addEntry(newEntry);
+
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]),0);
+								getCurrentSectionSize() += 2;
+							}
+							//	Symbol is defined in current section
+							else if (symbol->getSection() == current_section) {
+								
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+
+								getCurrentRelSection()->addEntry(newEntry);
+
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+								getCurrentSectionSize() += 2;
+							}
+							//	Symbol is defined in other section
+							else {
+								if (symbol->getLocality() == Local) {
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+
+									getCurrentRelSection()->addEntry(newEntry);
+
+									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+									getCurrentSectionSize() += 2;
+								}
+								else {
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+
+									getCurrentRelSection()->addEntry(newEntry);
+
+									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+									getCurrentSectionSize() += 2;
+								}
+							}
+						} else if(relocation_type == R_386_PC32) {
+							//	Symbol is global and undefined
+							if (symbol->getSection() == "UNDEFINED") {
+
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+								
+								getCurrentRelSection()->addEntry(newEntry);
+
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]),-2);
+								getCurrentSectionSize() += 2;
+							}
+							//	Symbol is defined in current section
+							else if (symbol->getSection() == current_section) {
+								
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+
+								getCurrentRelSection()->addEntry(newEntry);
+
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-2);
+								getCurrentSectionSize() += 2;
+							}
+							//	Symbol is defined in other section
+							else {
+								if (symbol->getLocality() == Local) {
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+
+									getCurrentRelSection()->addEntry(newEntry);
+
+									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-2);
+									getCurrentSectionSize() += 2;
+								}
+								else {
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+
+									getCurrentRelSection()->addEntry(newEntry);
+
+									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-2);
+									getCurrentSectionSize() += 2;
+								}
+							}	
+						}
+					} else {
+
+						cout << "Error: unknown operand ,," << mem_operand << ",, required, at line: " << line << endl << flush;
+						return false;
+
+					}
+
+				}
 			}
+
+			dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize() - (has_additional_two_bytes ? 4 : 2));
 
 			break;
 
