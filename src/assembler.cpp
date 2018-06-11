@@ -243,11 +243,13 @@ void Assembler::printByteToHex(char byte)
 
 void Assembler::dumpSectionBytes(char * section, int size)
 {
+	cout << endl << flush;
 	if (section != 0 && size > 0) {
 		for (int i = 0; i < size; i++) {
 			printByteToHex(section[i]);
 		}
 	}
+	cout << endl << flush;
 }
 
 char * Assembler::getCurrentBytePointer()
@@ -602,8 +604,113 @@ bool Assembler::secondPass(int line) {
 				getCurrentSectionSize() += stoi(*it);
 
 			} else if (*it == ".long") {
+				//	Skip to next token
+				it++;
+
+				//	It can be without initializator
+				if (it != instruction.end()) {
+
+					//	Parse all tokens, variable operand length
+					while (it != instruction.end()) {
+
+						//	Check against CONST or SYMBOL
+						if (*it == "CONST") {
+							it++;
+
+							//	Convert to integer
+							int num = stoi(*it);
+
+							//	Put 4 bytes
+							int mask_first_8_bits = 255;
+
+							getCurrentBytePointer()[getCurrentSectionSize()++] = num & mask_first_8_bits;
+							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 8);
+							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 16);
+							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 24);
+
+							cout << "BYTES FROM " << current_section << endl << flush;
+							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+
+							it++;
+						}
+						else {
+							cout << "Memdir not yet implemented" << endl << flush;
+							return true;
+						}
+					}
+				}
+				else {
+					getCurrentSectionSize() += 4;
+					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+				}
+
 			} else if (*it == ".word") {
+				//	Skip to next token
+				it++;
+
+				//	It can be without initializator
+				if (it != instruction.end()) {
+					
+					while (it != instruction.end()) {
+						//	Check against CONST or SYMBOL
+						if (*it == "CONST") {
+							it++;
+
+							//	Convert to integer
+							int num = stoi(*it);
+
+							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), num);
+							getCurrentSectionSize() += 2;
+
+							cout << "BYTES FROM " << current_section << endl << flush;
+							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+							
+							it++;
+						}
+						else {
+							cout << "Memdir not yet implemented" << endl << flush;
+							return true;
+						}
+					}
+				}
+				else {
+					getCurrentSectionSize() += 2;
+					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+				}
 			} else if (*it == ".char") {
+				//	Skip to next token
+				it++;
+
+				//	It can be without initializator
+				if (it != instruction.end()) {
+					
+					while (it != instruction.end()) {
+						//	Check against CONST or SYMBOL
+						if (*it == "CONST") {
+							it++;
+
+							//	Convert to integer
+							int num = stoi(*it);
+
+							//	Add to section
+							getCurrentBytePointer()[getCurrentSectionSize()++] = num;
+
+							cout << "BYTES FROM " << current_section << endl << flush;
+							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+
+							it++;
+						}
+						else {
+							cout << "Memdir not yet implemented" << endl << flush;
+							return true;
+						}
+					}
+				}
+				else {
+					getCurrentSectionSize()++;
+					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize());
+				}
+
 			}
 
 			break;
