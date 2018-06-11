@@ -18,6 +18,7 @@ public:
 	static unsigned char makeSecondByte(int dst, int addressing, int src);
 	static void makeAdditionalTwoBytes(char* src, int value);
 	static void printByteToHex(char byte);
+	static void dumpSectionBytes(char* section, int size);
 
 private:
 	Array *lines;	 
@@ -28,12 +29,18 @@ private:
 	RelTable* ret_text;
 	char *text_bytes;
 	int size_of_text;
+	int current_size_of_text;
 	RelTable* ret_data;
 	char *data_bytes;
 	int size_of_data;
+	int current_size_of_data;
 	RelTable* ret_rodata;
 	char *rodata_bytes;
 	int size_of_rodata;
+	int current_size_of_rodata;
+
+	char* getCurrentBytePointer();
+	int& getCurrentSectionSize();
 
 
 	bool firstPass(int);

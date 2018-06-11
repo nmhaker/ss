@@ -28,6 +28,9 @@ ParseTree::ParseTree() {
 }
 
 ParseTree::~ParseTree() {
+	for (map<char, TreeNode*>::iterator it = root.begin(); it != root.end(); it++) {
+		delete it->second;
+	}
 }
 
 void ParseTree::populateTree() {
@@ -1171,6 +1174,11 @@ std::list<std::string> ParseTree::getParsedInstruction(int line)
 		emp.clear();
 		return emp;
 	}
+}
+
+int ParseTree::getReqOp(std::string name)
+{
+	return req_op.at(name);
 }
 
 string ParseTree::getInstructionField(list<string> lst, string key) {

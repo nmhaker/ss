@@ -27,6 +27,7 @@ public:
 	
 	bool parse(std::string line, int lineNumber);
 	std::list<std::string> getParsedInstruction(int line);
+	int getReqOp(std::string);
 
 	static std::string getInstructionField(std::list<std::string>,std::string);
 

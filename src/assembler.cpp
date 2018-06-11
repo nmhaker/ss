@@ -43,17 +43,47 @@ Assembler::Assembler(char* inputFileName){
 	first_pass_completed = true;
 	end_directive_reached = false;
 
+	ret_text = 0;
+	ret_data = 0;
+	ret_rodata = 0;
 	text_bytes = 0;
 	data_bytes = 0;
 	rodata_bytes = 0;
+	current_size_of_text = 0;
+	current_size_of_data = 0;
+	current_size_of_rodata = 0;
 
 	assemble();
+
+	cout << "Bytes of text section" << endl << flush;
+	dumpSectionBytes(text_bytes, size_of_text);
+	cout << endl << "Bytes of data section" << endl << flush;
+	dumpSectionBytes(data_bytes, size_of_data);
+	cout << endl << "Bytes of rodata section" << endl << flush;
+	dumpSectionBytes(rodata_bytes, size_of_rodata);
+
 }
 
 Assembler::~Assembler(){
 //	cout << "Destruktor" << endl;
-    delete lines;
-    delete pt;
+	if(lines!=0)
+		delete lines;
+	if(pt!=0)
+		delete pt;
+	if(st!=0)
+		delete st;
+	if(ret_text!=0)
+		delete ret_text;
+	if(ret_data!=0)
+		delete ret_data;
+	if(ret_rodata!=0)
+		delete ret_rodata;
+	if(text_bytes!=0)
+		delete text_bytes;
+	if(data_bytes!=0)
+		delete data_bytes;
+	if(rodata_bytes!=0)
+		delete rodata_bytes;
 }
 
 void Assembler::assemble() {
@@ -106,20 +136,30 @@ void Assembler::assemble() {
 		if (entry != 0) {
 			size_of_text = entry->getSize();
 			text_bytes = new char[size_of_text];
+			//	Clear bytes
+			for (int i = 0; i < size_of_text; i++)
+				text_bytes[i] = 0;
 		}
 		entry = st->getEntry(".data");
 		if (entry != 0) {
 			size_of_data = entry->getSize();
 			data_bytes = new char[size_of_data];
+			//	Clear bytes
+			for (int i = 0; i < size_of_data; i++)
+				data_bytes[i] = 0;
 		}
 		entry = st->getEntry(".rodata");
 		if (entry != 0) {
 			size_of_rodata = entry->getSize();
 			rodata_bytes = new char[size_of_rodata];
+			//	Clear bytes
+			for (int i = 0; i < size_of_rodata; i++)
+				rodata_bytes[i] = 0;
 		}
 
+		int i;
 		//	Second pass
-		for (int i = 1; i < lines->getSize(); i++) {
+		for (i = 1; i < lines->getSize(); i++) {
 			//	Parse till the .end directive
 			if(!end_directive_reached)
 				secondPass(i);
@@ -139,7 +179,10 @@ void Assembler::assemble() {
 unsigned char Assembler::makeFirstByte(int condition, int opcode, int addressing)
 {
 	if (condition > 3 || condition < 0 || opcode > 15 || opcode < 0 || addressing < 0 || addressing > 3) {
-		cout << "Error: wrong opcode" << endl << flush;
+		cout << "Error: wrong opcode" << endl << flush; 
+		cout << "Enter anything to continue: " << flush;
+		int a;
+		cin >> a;
 		exit(1);
 	}
 
@@ -160,6 +203,9 @@ unsigned char Assembler::makeSecondByte(int dst, int addressing, int src)
 {
 	if (dst > 7 || dst < 0 || src > 7 || src < 0 || addressing < 0 || addressing > 3) {
 		cout << "Error: wrong opcode" << endl << flush;
+		cout << "Enter anything to continue: " << flush;
+		int a;
+		cin >> a;
 		exit(1);
 	}
 
@@ -193,6 +239,45 @@ void Assembler::makeAdditionalTwoBytes(char * src, int value)
 void Assembler::printByteToHex(char byte)
 {
 	cout << hex << (unsigned short) byte;
+}
+
+void Assembler::dumpSectionBytes(char * section, int size)
+{
+	if (section != 0 && size > 0) {
+		for (int i = 0; i < size; i++) {
+			printByteToHex(section[i]);
+		}
+	}
+}
+
+char * Assembler::getCurrentBytePointer()
+{
+	if (current_section == ".text")
+		return this->text_bytes;
+	else if (current_section == ".data")
+		return this->data_bytes;
+	else if (current_section == ".rodata")
+		return this->rodata_bytes;
+	else {
+		return 0;
+	}
+}
+
+int& Assembler::getCurrentSectionSize()
+{
+	if (current_section == ".text")
+		return current_size_of_text;
+	else if (current_section == ".data")
+		return current_size_of_data;
+	else if (current_section == ".rodata")
+		return current_size_of_rodata;
+	else {
+		cout << "Not allowed current section" << endl << flush;
+		cout << "Enter anything to continue: " << flush;
+		int a;
+		cin >> a;
+		exit(1);
+	}
 }
 
 bool Assembler::firstPass(int line) {
@@ -468,6 +553,11 @@ bool Assembler::secondPass(int line) {
 
 	//	Handle parsed instruction
 	for (list<string>::const_iterator it = instruction.begin(); it != instruction.end(); it++) {
+
+		//	Skip bss section till the SECTION directive appears so we can change it
+		if ( (current_section == ".bss") && (*it != "SECTION"))
+			return true;
+
 		if (*it == "DIRECTIVE") {
 
 			//	Next -> name of directive
@@ -492,11 +582,25 @@ bool Assembler::secondPass(int line) {
 			}
 			//	Stop parsing when .end directive reached
 			else if (*it == ".end") {
+
 				end_directive_reached = true;
 				return true;
-			} else if (*it == ".align") {
+
+			}
+			else if (*it == ".align") {
+
 				cout << "Error: directive not supported yet" << endl << flush;
 				return false;
+
+			}else if(*it == ".skip"){
+				
+				//	Skip to next token
+				it++;
+				//	This token always IMMEDIATE so skip it also
+				it++;
+
+				getCurrentSectionSize() += stoi(*it);
+
 			} else if (*it == ".long") {
 			} else if (*it == ".word") {
 			} else if (*it == ".char") {
@@ -510,8 +614,6 @@ bool Assembler::secondPass(int line) {
 
 			//	Update current section
 			current_section = *it;
-			//	Reset section size counter == offset into current section
-			section_size = 0;
 
 			break;
 
@@ -520,13 +622,217 @@ bool Assembler::secondPass(int line) {
 			//	Skip to next token
 			it++;
 
-			//	Check for condition
-			string condition = ParseTree::getInstructionField(instruction, "CONDITION");
-			if (!condition.empty()) {
-				cout << "Ima uslov: " << condition << ", at line: " << line << endl << flush;
+			string instruction_string = *it;
+
+			//	Parse instruction opcode
+			int instruction_opcode = 0; 
+
+			if (*it == "add")
+				instruction_opcode = 0;
+			else if (*it == "sub")
+				instruction_opcode = 1;
+			else if (*it == "mul")
+				instruction_opcode = 2;
+			else if (*it == "div")
+				instruction_opcode = 3;
+			else if (*it == "cmp")
+				instruction_opcode = 4;
+			else if (*it == "and")
+				instruction_opcode = 5;
+			else if (*it == "or")
+				instruction_opcode = 6;
+			else if (*it == "not")
+				instruction_opcode = 7;
+			else if (*it == "test")
+				instruction_opcode = 8;
+			else if (*it == "push")
+				instruction_opcode = 9;
+			else if (*it == "pop")
+				instruction_opcode = 10;
+			else if (*it == "call")
+				instruction_opcode = 11;
+			else if (*it == "iret")
+				instruction_opcode = 12;
+			else if (*it == "mov")
+				instruction_opcode = 13;
+			else if (*it == "shl")
+				instruction_opcode = 14;
+			else if (*it == "shr")
+				instruction_opcode = 15;
+			else if (*it == "jmp") {
+				cout << "jmp not yet implemented, at line: " << line << endl << flush;
+				return true;
 			}
-			else {
-				cout << "Nema uslov, at line: " << line << endl << flush;
+			else if (*it == "ret") {
+				cout << "ret not yet implemented, at line: " << line << endl << flush; 
+				return true;
+			}else {
+				cout << "Error: unknown instruction, at line: " << line << endl << flush;
+				return false;
+			}
+			
+			//	Skip to next token
+			it++;
+
+			int condition_opcode = 3;
+
+			int expected_operands = pt->getReqOp(instruction_string);
+			int parsed_operands = 0;
+
+			int dst_addressing = 0;
+			int dst = 0;
+			int src_addressing = 0;
+			int src = 0;
+			int pom = 0;
+
+			int tmp_addressing = 0;
+			int tmp_src_dst = 0;
+
+			bool has_additional_two_bytes = false;
+
+			while (it != instruction.end() && parsed_operands != expected_operands) {
+
+				//	Check for condition
+				if (*it == "CONDITION") {
+
+					it++;
+
+					if (*it == "eq")
+						condition_opcode = 0;
+					else if (*it == "ne")
+						condition_opcode = 1;
+					else if (*it == "gt")
+						condition_opcode = 2;
+					else if (*it == "al")
+						condition_opcode = 3;
+
+					it++;
+
+				}
+
+				//	Parse addressing 
+				if (*it == "REGDIR") {
+
+					tmp_addressing = 1;
+
+					it++;
+
+					if (*it == "r0")
+						tmp_src_dst = 0;
+					else if (*it == "r1")
+						tmp_src_dst = 1;
+					else if (*it == "r2")
+						tmp_src_dst = 2;
+					else if (*it == "r3")
+						tmp_src_dst = 3;
+					else if (*it == "r4")
+						tmp_src_dst = 4;
+					else if (*it == "r5")
+						tmp_src_dst = 5;
+					else if (*it == "r6")
+						tmp_src_dst = 6;
+					else if (*it == "r7")
+						tmp_src_dst = 7;
+
+				}
+				else if (*it == "REGINDPOM") {
+
+					tmp_addressing = 3;
+					has_additional_two_bytes = true;
+
+					it++;
+
+					if (*it == "r0")
+						tmp_src_dst = 0;
+					else if (*it == "r1")
+						tmp_src_dst = 1;
+					else if (*it == "r2")
+						tmp_src_dst = 2;
+					else if (*it == "r3")
+						tmp_src_dst = 3;
+					else if (*it == "r4")
+						tmp_src_dst = 4;
+					else if (*it == "r5")
+						tmp_src_dst = 5;
+					else if (*it == "r6")
+						tmp_src_dst = 6;
+					else if (*it == "r7")
+						tmp_src_dst = 7;
+
+					it++;
+
+					if (*it == "CONST") {
+						it++;
+						pom = stoi(*it);
+					}
+					else if(*it == "SYMBOL") {
+						cout << "Error: getting address of label not yet implemented" << endl << flush;
+						return false;
+					}
+
+				}
+				else if (*it == "MEMDIR") {
+					tmp_addressing = 2;
+					has_additional_two_bytes = true;
+
+					cout << "Error: getting address of label not yet implemented" << endl << flush;
+					return false;
+				}
+				else if (*it == "MEMDIRIMMED") {
+					tmp_addressing = 2;
+					has_additional_two_bytes = true;
+
+					it++;
+
+					pom = stoi(*it);
+				}
+				else if (*it == "REFERENCE") {
+					cout << "Error: getting address of label not yet implemented" << endl << flush;
+					return false;
+				}
+				else if (*it == "PCRELPOM") {
+					cout << "Error: getting address of label not yet implemented" << endl << flush;
+					return false;
+				}
+				else if (*it == "IMMEDIATE") {
+					tmp_addressing = 0;
+					has_additional_two_bytes = true;
+
+					it++;
+
+					pom = stoi(*it);
+				}
+				else {
+					cout << "Error: unknown addressing type, at line: " << line << endl << flush;
+					return false;
+				}
+
+				//	Update operands
+				if (parsed_operands == 0) {
+					dst_addressing = tmp_addressing;
+					dst = tmp_src_dst;
+				}
+				else {
+					src_addressing = tmp_addressing;
+					src = tmp_src_dst;
+				}
+
+				//	Increment operands parsed
+				parsed_operands++;
+				
+				//	Skip to next token
+				it++;
+			}
+
+			char firstByte = makeFirstByte(condition_opcode, instruction_opcode, dst_addressing);
+			char secondByte = makeSecondByte(dst, src_addressing, src);
+
+			getCurrentBytePointer()[ getCurrentSectionSize()++ ] = firstByte;
+			getCurrentBytePointer()[ getCurrentSectionSize()++ ] = secondByte;
+
+			if (has_additional_two_bytes) {
+				makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), pom);
+				getCurrentSectionSize() += 2;
 			}
 
 			break;
@@ -537,7 +843,7 @@ bool Assembler::secondPass(int line) {
 			it++;
 
 		} else {
-			cout << "Token of this type shouldnt appear here" << endl << flush;
+			cout << "Token of this type shouldn't appear here" << endl << flush;
 			return false;
 		}
 

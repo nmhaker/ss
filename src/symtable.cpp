@@ -11,7 +11,6 @@ SymTable::SymTable() {
 SymTable::~SymTable() {
 	for (map<int, SymEntry*>::iterator it = final_entries.begin(); it != final_entries.end(); it++) {
 		delete it->second;
-		final_entries.erase(it);
 	}
 }
 

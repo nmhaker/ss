@@ -11,7 +11,6 @@ RelTable::~RelTable()
 {
 	for (map<int, RelEntry*>::iterator it = rel_entries.begin(); it != rel_entries.end(); it++) {
 		delete it->second;
-		rel_entries.erase(it);
 	}
 }
 

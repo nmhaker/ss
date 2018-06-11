@@ -15,8 +15,7 @@ TreeNode::TreeNode(char c, Type t, std::string value) {
 TreeNode::~TreeNode() {
 	if(!children.empty()){
 		for(std::map<char, TreeNode*>::iterator it=children.begin(); it!=children.end(); it++){
-			delete it->second;
-			children.erase(it);
+				delete it->second;
 		}		
 	}
 }
