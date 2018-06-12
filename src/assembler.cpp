@@ -67,6 +67,14 @@ Assembler::Assembler(char* inputFileName){
 	cout << endl << "Bytes of rodata section" << endl << flush;
 	dumpSectionBytes(rodata_bytes, size_of_rodata, -1);
 
+
+	cout << endl << "Text Relocation Table" << endl << flush;
+	ret_text->dumpTable();
+	cout << endl << "Data Relocation Table" << endl << flush;
+	ret_data->dumpTable();
+	cout << endl << "Rodata Relocation Table" << endl << flush;
+	ret_rodata->dumpTable();
+
 }
 
 Assembler::~Assembler(){
@@ -178,6 +186,8 @@ void Assembler::assemble() {
 
 		//	Print symbol table
 		st->dumpTable();
+		
+
 	}
 }
 
@@ -241,26 +251,45 @@ void Assembler::makeAdditionalTwoBytes(char * src, int value)
 	}
 }
 
-void Assembler::printByteToHex(unsigned char byte)
+void Assembler::printByteToHex(char byte, bool printNegative)
 {
 	if (byte >= 0 && byte < 10)
 		cout << "0";
-	cout << hex << (unsigned short) byte;
+
+	if (byte < 0 && !printNegative) {
+		cout << hex << ((unsigned short)(byte) & (0x00ff));
+	} else
+		cout << hex << (unsigned short)( byte );
 }
 
 void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 {
+	int count = 0;
 	if (startingPosition == -1) {
 		if (section != 0 && size > 0) {
 			for (int i = 0; i < size; i++) {
-				printByteToHex(section[i]);
+				if(count < 2)
+					printByteToHex(section[i], false);
+				else {
+					printByteToHex(section[i], true);
+					if (section[i] < 0) 
+						break;
+				}
+				count++;
 			}
 		}
 	}
 	else {
 		if (section != 0 && size > 0) {
 			for (int i = startingPosition; i < size; i++) {
-				printByteToHex(section[i]);
+				if (count < 2)
+					printByteToHex(section[i], false);
+				else {
+					printByteToHex(section[i], true);
+					if (section[i] < 0)
+						break;;
+				}
+				count++;
 			}
 			cout << " " << flush;
 		}
@@ -587,7 +616,7 @@ bool Assembler::secondPass(int line) {
 		if ( (current_section == ".bss") && (*it != "SECTION"))
 			return true;
 
-		RelocationType relocation_type = R_386_32;
+		RelocationType relocation_type = R_386_16;
 
 		string mem_operand;
 		mem_operand.clear();
@@ -707,6 +736,8 @@ bool Assembler::secondPass(int line) {
 							it++;
 
 							mem_operand = *it;
+
+							it++;
 						}
 					}
 				}
@@ -741,6 +772,8 @@ bool Assembler::secondPass(int line) {
 							it++;
 
 							mem_operand = *it;
+							
+							it++;
 						}
 					}
 				}
@@ -749,6 +782,55 @@ bool Assembler::secondPass(int line) {
 					dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-1);
 				}
 			}
+
+			SymEntry* symbol = st->getEntry(mem_operand);
+
+			if (symbol != 0) {
+
+				if (relocation_type == R_386_16) {
+
+					//	Symbol is global and undefined
+					if (symbol->getSection() == "UNDEFINED") {
+
+						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+						
+						getCurrentRelSection()->addEntry(newEntry);
+
+						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]),0);
+						getCurrentSectionSize() += 2;
+					}
+					//	Symbol is defined in current section
+					else if (symbol->getSection() == current_section) {
+						
+						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+
+						getCurrentRelSection()->addEntry(newEntry);
+
+						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+						getCurrentSectionSize() += 2;
+					}
+					//	Symbol is defined in other section
+					else {
+						if (symbol->getLocality() == Local) {
+							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
+
+							getCurrentRelSection()->addEntry(newEntry);
+
+							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+							getCurrentSectionSize() += 2;
+						}
+						else {
+							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+
+							getCurrentRelSection()->addEntry(newEntry);
+
+							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+							getCurrentSectionSize() += 2;
+						}
+					}
+				}
+			} 
+
 
 			break;
 		} else if (*it == "SECTION") {
@@ -820,7 +902,7 @@ bool Assembler::secondPass(int line) {
 			else if (*it == "shr")
 				instruction_opcode = 15;
 			else if (*it == "jmp") {
-				relocation_type = R_386_PC32;
+				relocation_type = R_386_PC16;
 				instruction_opcode = 0;	//	ADD
 			}
 			else if (*it == "ret") {
@@ -915,7 +997,6 @@ bool Assembler::secondPass(int line) {
 					else if(*it == "SYMBOL") {
 						it++;
 						mem_operand = *it;
-						relocation_type = R_386_32;
 					}
 
 				}
@@ -1001,7 +1082,7 @@ bool Assembler::secondPass(int line) {
 
 					if (symbol != 0) {
 
-						if (relocation_type == R_386_32) {
+						if (relocation_type == R_386_16) {
 
 							//	Symbol is global and undefined
 							if (symbol->getSection() == "UNDEFINED") {
@@ -1026,7 +1107,7 @@ bool Assembler::secondPass(int line) {
 							//	Symbol is defined in other section
 							else {
 								if (symbol->getLocality() == Local) {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
 
 									getCurrentRelSection()->addEntry(newEntry);
 
@@ -1042,7 +1123,7 @@ bool Assembler::secondPass(int line) {
 									getCurrentSectionSize() += 2;
 								}
 							}
-						} else if(relocation_type == R_386_PC32) {
+						} else if(relocation_type == R_386_PC16) {
 							//	Symbol is global and undefined
 							if (symbol->getSection() == "UNDEFINED") {
 
@@ -1060,7 +1141,7 @@ bool Assembler::secondPass(int line) {
 
 								getCurrentRelSection()->addEntry(newEntry);
 
-								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-2);
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-getCurrentSectionSize()+2);
 								getCurrentSectionSize() += 2;
 							}
 							//	Symbol is defined in other section

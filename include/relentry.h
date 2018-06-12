@@ -2,8 +2,8 @@
 #define RELENTRY_H
 
 enum RelocationType {
-	R_386_32,
-	R_386_PC32
+	R_386_16,
+	R_386_PC16
 };
 
 class RelEntry {

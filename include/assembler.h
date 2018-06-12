@@ -17,7 +17,7 @@ public:
 	static unsigned char makeFirstByte(int condition, int opcode, int addressing);
 	static unsigned char makeSecondByte(int dst, int addressing, int src);
 	static void makeAdditionalTwoBytes(char* src, int value);
-	static void printByteToHex(unsigned char byte);
+	static void printByteToHex(char byte, bool printNegative=true);
 	static void dumpSectionBytes(char* section, int size, int startingPosition);
 
 private:
