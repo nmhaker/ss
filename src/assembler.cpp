@@ -666,7 +666,7 @@ bool Assembler::firstPass(int line) {
 				section_size += 2;
 				it++;
 			//	All addressing modes requires additional 2 bytes except regdir and need to skip helper symbols ,,CONST'' ,,CONDITION'' ,,SYMBOL'' 
-			} else if (*it != "REGDIR" && *it != "CONST" && *it != "CONDITION" && *it!="SYMBOL") {
+			} else if (*it != "REGDIR" && *it != "CONST" && *it != "CONDITION" && *it!="SYMBOL" && *it!="PSW") {
 				lc += 2;
 				section_size += 2;
 				it++;
@@ -889,7 +889,7 @@ bool Assembler::secondPass(int line) {
 				if (relocation_type == R_386_16) {
 
 					//	Symbol is global and undefined
-					if (symbol->getSection() == "UNDEFINED") {
+					if (symbol->getSection() == "UNDEFINED" || symbol->getLocality() == Global) {
 
 						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
 
@@ -898,44 +898,25 @@ bool Assembler::secondPass(int line) {
 						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), 0);
 						getCurrentSectionSize() += increment;
 					}
-					//	Symbol is defined in current section
+					//	Symbol is defined in current section and is local
 					else if (symbol->getSection() == current_section) {
 
-						if (symbol->getLocality() == Local) {
-							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
 
-							getCurrentRelSection()->addEntry(newEntry);
+						getCurrentRelSection()->addEntry(newEntry);
 
-							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-							getCurrentSectionSize() += increment;
-						}
-						else {
-							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue() - st->getEntry(current_section)->getValue());
+						getCurrentSectionSize() += increment;
 
-							getCurrentRelSection()->addEntry(newEntry);
-
-							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-							getCurrentSectionSize() += increment;
-						}
 					}
-					//	Symbol is defined in other section
+					//	Symbol is defined in other section and is local
 					else {
-						if (symbol->getLocality() == Local) {
-							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
+						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
 
-							getCurrentRelSection()->addEntry(newEntry);
+						getCurrentRelSection()->addEntry(newEntry);
 
-							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-							getCurrentSectionSize() += increment;
-						}
-						else {
-							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
-
-							getCurrentRelSection()->addEntry(newEntry);
-
-							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-							getCurrentSectionSize() += increment;
-						}
+						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue() - st->getEntry(symbol->getSection())->getValue());
+						getCurrentSectionSize() += increment;
 					}
 
 				}
@@ -1017,10 +998,11 @@ bool Assembler::secondPass(int line) {
 				//	If pcrel addressing use ADD instruction with relative R_386_PC16 relocation, otherwise for all others use MOV instruction with absolute R_386_16 relocation
 				if (!ParseTree::getInstructionField(instruction, "PCRELPOM").empty()) {
 					instruction_opcode = 0;	//	ADD
-				}
-				else {
+				} else {
 					instruction_opcode = 13; //	MOV
 				}
+
+				jmp_instruction = true;
 			}
 			else if (*it == "ret") {
 				instruction_opcode = 10;
@@ -1146,10 +1128,14 @@ bool Assembler::secondPass(int line) {
 
 					it++;
 					mem_operand = *it;
-					
-					tmp_addressing = 0;
-					tmp_src_dst = 0;
+				
+					if (!jmp_instruction) {
+						tmp_addressing = 3;
+						tmp_src_dst = 7;
+					}
+
 					has_additional_two_bytes = true;
+
 				}
 				else if (*it == "IMMEDIATE") {
 					tmp_addressing = 0;
@@ -1217,7 +1203,7 @@ bool Assembler::secondPass(int line) {
 						if (relocation_type == R_386_16) {
 
 							//	Symbol is global and undefined
-							if (symbol->getSection() == "UNDEFINED") {
+							if (symbol->getSection() == "UNDEFINED" || symbol->getLocality() == Global) {
 
 								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
 								
@@ -1226,48 +1212,30 @@ bool Assembler::secondPass(int line) {
 								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]),0);
 								getCurrentSectionSize() += 2;
 							}
-							//	Symbol is defined in current section
+							//	Symbol is defined in current section and is local
 							else if (symbol->getSection() == current_section) {
 								
-								if (symbol->getLocality() == Local) {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
 
-									getCurrentRelSection()->addEntry(newEntry);
+								getCurrentRelSection()->addEntry(newEntry);
 
-									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-									getCurrentSectionSize() += 2;
-								}
-								else {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
-
-									getCurrentRelSection()->addEntry(newEntry);
-
-									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-									getCurrentSectionSize() += 2;
-								}
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-st->getEntry(current_section)->getValue());
+								getCurrentSectionSize() += 2;
+								
 							}
-							//	Symbol is defined in other section
+							//	Symbol is defined in other section and is local
 							else {
-								if (symbol->getLocality() == Local) {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
 
-									getCurrentRelSection()->addEntry(newEntry);
+								getCurrentRelSection()->addEntry(newEntry);
 
-									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-									getCurrentSectionSize() += 2;
-								}
-								else {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
-
-									getCurrentRelSection()->addEntry(newEntry);
-
-									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-									getCurrentSectionSize() += 2;
-								}
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-st->getEntry(symbol->getSection())->getValue());
+								getCurrentSectionSize() += 2;
 							}
+
 						} else if(relocation_type == R_386_PC16) {
 							//	Symbol is global and undefined
-							if (symbol->getSection() == "UNDEFINED") {
+							if (symbol->getSection() == "UNDEFINED" || symbol->getLocality() == Global) {
 
 								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
 								
@@ -1283,37 +1251,25 @@ bool Assembler::secondPass(int line) {
 
 								getCurrentRelSection()->addEntry(newEntry);
 
-								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue() - (st->getEntry(current_section)->getValue() + getCurrentSectionSize() + 2));
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue() - st->getEntry(current_section)->getValue() - 2);
 								getCurrentSectionSize() += 2;
 
 							}
 							//	Symbol is defined in other section
 							else {
-								if (symbol->getLocality() == Local) {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
 
-									getCurrentRelSection()->addEntry(newEntry);
+								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
 
-									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-2);
-									getCurrentSectionSize() += 2;
-								}
-								else {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+								getCurrentRelSection()->addEntry(newEntry);
 
-									getCurrentRelSection()->addEntry(newEntry);
-
-									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-2);
-									getCurrentSectionSize() += 2;
-								}
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-st->getEntry(symbol->getSection())->getValue()-2);
+								getCurrentSectionSize() += 2;
 							}	
 						}
 					} else {
-
 						cout << "Error: unknown operand ,," << mem_operand << ",, required, at line: " << line << endl << flush;
 						return false;
-
 					}
-
 				}
 			}
 
