@@ -410,7 +410,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 					//	Memdir addressing;	
 					//	symbols starting with 'r' are redirected for later parsing in case that was regdir addressing or symbol memdir
-					if ( (isalpha(line[i]) || line[i] == '.') && (line[i]!='r') ) {
+					if ( (isalpha(line[i]) || line[i] == '.') && (line[i]!='r') && !checkForPSW(line,i) ) {
 
 						if (!checkAddressing(instruction, "MEMDIR")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
@@ -928,6 +928,34 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 							i++;
 						}
 					}
+					//	PSW addressing required
+					else if (checkForPSW(line,i)) {
+
+						i += 3;
+						symbol.clear();
+						instruction.push_back("PSW");
+						instruction.push_back("psw");
+
+						if (operands_counter == 1 || operands_expected == 1) {
+							while (i != line.size()) {
+								if (!isspace(line[i])) {
+									cout << "Error: expected whitespace till the end of line, at line: " << lineNumber << endl << flush;
+									return false;
+								}
+								i++;
+							}
+						}
+						else {
+							while (i != line.size() && line[i] != ',') i++;
+
+							if (line[i] != ',') {
+								cout << "Error: comma expected after first operand, at line: " << lineNumber << endl << flush;
+								return false;
+							}
+							i++;
+						}
+
+					}
 					//	Unknown addressing required
 					else {
 						cout << "Error: unknown addressing required, at line: " << lineNumber << endl << flush;
@@ -1142,6 +1170,36 @@ ParseTree* ParseTree::addChild(TreeNode* node) {
 ParseTree* ParseTree::addReqOp(std::string instruction, int num_of_operands) {
 	req_op.insert( std::pair<string, int>(instruction, num_of_operands));
 	return this;
+}
+
+bool ParseTree::checkForPSW(string line, int offset)
+{
+	bool p = false;
+	bool s = false;
+	bool w = false;
+	for (unsigned i = offset; i < line.size(); i++) {
+		if (line[i] == 'p') {
+			p = true;
+			continue;
+		}
+		if (p && line[i] == 's') {
+			s = true;
+			continue;
+		}
+		if (p && s && line[i] == 'w') {
+			w = true;
+			if (i + 1 == line.size())
+				return true;
+			continue;
+		}
+		if (p&&s&&w)
+			if (isspace(line[i]) || line[i] == ',') {
+				return true;
+			} else {
+				return false;
+			}
+	}
+	return false;
 }
 
 bool ParseTree::checkAddressing(std::list<std::string> list, string addressing)

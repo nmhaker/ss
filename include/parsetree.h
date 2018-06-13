@@ -44,6 +44,8 @@ private:
 	void populateTree();
 	ParseTree* addChild(TreeNode*);
 	ParseTree* addReqOp(std::string, int);
+
+	bool checkForPSW(std::string, int);
 };
 
 #endif /* PARSETREE_H */

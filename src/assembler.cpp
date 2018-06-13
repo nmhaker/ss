@@ -588,8 +588,8 @@ bool Assembler::firstPass(int line) {
 						counter += factor;
 					}
 					if (counter == 0) {
-						lc += factor;
-						section_size += factor;
+						cout << "Error: .data section needs to have initializer, at line: " << line << endl << flush;
+						return false;
 					}
 					else {
 						lc += counter;
@@ -982,8 +982,6 @@ bool Assembler::secondPass(int line) {
 			//	Skip to next token
 			it++;
 
-
-
 			while (it != instruction.end() && parsed_operands != expected_operands) {
 
 				//	Check for condition
@@ -1108,6 +1106,11 @@ bool Assembler::secondPass(int line) {
 					it++;
 
 					pom = stoi(*it);
+				}
+				else if (*it == "PSW") {
+					tmp_addressing = 0;
+					tmp_src_dst = 7;
+					it++;
 				}
 				else {
 					cout << "Error: unknown addressing type, at line: " << line << endl << flush;
