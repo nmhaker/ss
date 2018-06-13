@@ -362,7 +362,8 @@ bool Assembler::firstPass(int line) {
 					return true;	
 				}
 				else if (*it == ".align") {
-					return true;
+					cout << "Error: cannot align outside sections, at line: " << line << endl << flush;
+					return false;
 				}
 				else {
 					cout << "Error: forbidden DIRECTIVE: " << *it << " outside sections, at line: " << line << endl << flush;
@@ -435,6 +436,21 @@ bool Assembler::firstPass(int line) {
 
 				//	Check for bad directives in text section
 				if (current_section == ".text") {
+					if (*it == ".align") {
+						it++; it++;
+						int factor = stoi(*it);
+						if (section_size== 0) {
+							while (lc % factor != 0) {
+								lc++;
+								section_size++;
+							}
+							return true;
+						}
+						else {
+							cout << "Error: .align directive allowed only at beginning of section" << endl << flush;
+							return false;
+						}
+					}
 					if (*it != ".end"){
 						cout << "Error: directive " << *it << " forbidden in text section" << endl << flush;
 						return false;
@@ -455,9 +471,20 @@ bool Assembler::firstPass(int line) {
 					} else if (*it == ".end") {
 						end_directive_reached = true;
 						return true;
-					} else if (*it == ".skip") {
+					}
+					else if (*it == ".skip") {
 						cout << "Error: .skip directive not allowed in .rodata section, must have initializer, at line: " << line << endl << flush;
 						return false;
+					}else if( *it == ".align"){
+
+						it++; it++;
+						int factor = stoi(*it);
+						while (lc % factor != 0) {
+							lc++;
+							section_size++;
+						}
+						return true;
+
 					}else {
 						cout << "Error: not allowed directive " << *it << " at line: " << line << endl << flush;
 						return false;
@@ -497,6 +524,16 @@ bool Assembler::firstPass(int line) {
 					else if (*it == ".end") {
 						end_directive_reached = true;
 						return true;
+					} else if (*it == ".align") {
+
+						it++; it++;
+						int factor = stoi(*it);
+						while (lc % factor != 0) {
+							lc++;
+							section_size++;
+						}
+						return true;
+
 					} else if (*it == ".skip") {
 						it++; 
 						if (it == instruction.end()) {
@@ -554,11 +591,20 @@ bool Assembler::firstPass(int line) {
 					}
 					else if (*it == ".long") {
 						factor = 4;
-					}
-					else if (*it == ".end") {
+					} else if (*it == ".end") {
 			
 						end_directive_reached = true;
 						return true;
+					} else if (*it == ".align") {
+
+						it++; it++;
+						int factor = stoi(*it);
+						while (lc % factor != 0) {
+							lc++;
+							section_size++;
+						}
+						return true;
+
 					} else if (*it == ".skip") {
 						it++; 
 						if (it == instruction.end()) {
@@ -691,8 +737,14 @@ bool Assembler::secondPass(int line) {
 			}
 			else if (*it == ".align") {
 
-				cout << "Error: directive not supported yet" << endl << flush;
-				return false;
+				it++; it++;
+				int factor = stoi(*it);
+				while (lc % factor != 0) {
+					lc++;
+					getCurrentSectionSize()++;
+				}
+
+				return true;
 
 			}else if(*it == ".skip"){
 				

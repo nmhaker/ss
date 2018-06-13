@@ -456,6 +456,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 							return false;
 						}
 
+						if (getInstructionField(instruction, "DIRECTIVE") == ".align" && checkNegative(line, i)) {
+							cout << "Error: cannot have negative values for .align directive" << endl << flush;
+							return false;
+						}
+
 						instruction.push_back("IMMEDIATE");
 
 						if (getInstructionField(instruction, "DIRECTIVE") == ".char" || getInstructionField(instruction, "DIRECTIVE") == ".word" || getInstructionField(instruction, "DIRECTIVE") == ".long" || getInstructionField(instruction, "DIRECTIVE") == ".align" || getInstructionField(instruction, "DIRECTIVE") == ".skip" || getInstructionField(instruction, "INSTRUCTION") == "push" || operands_expected == 2) {
