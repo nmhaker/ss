@@ -17,12 +17,12 @@ int main(int argc, char** argv){
 
 				Assembler *assembler = 0;
 
-				if(argc <= 1){
-					cout << "Fatal: no input files";
+				if(argc != 3){
+					cout << "Two parameters required" << endl;
 					return -1;
 				}else{
 					char* inputFileName = argv[1];
-					assembler = new Assembler(inputFileName);	
+					assembler = new Assembler(inputFileName, argv[2]);	
 				}
 
 				delete assembler;
@@ -33,12 +33,12 @@ int main(int argc, char** argv){
 
 			Assembler *assembler = 0;
 
-			if(argc <= 1){
-				cout << "Fatal: no input files";
+			if(argc != 3){
+				cout << "Two parameters required" << endl;
 				return -1;
 			}else{
 				char* inputFileName = argv[1];
-				assembler = new Assembler(inputFileName);	
+				assembler = new Assembler(inputFileName, argv[2]);	
 			}
 
 			delete assembler;

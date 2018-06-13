@@ -9,10 +9,13 @@
 
 using namespace std;
 
-Assembler::Assembler(char* inputFileName){
+Assembler::Assembler(char* inputFileName, char* startingPosition){
 
 //	cout << "Konstruktor" << endl;	
 //	cout << "Input file: " << inputFileName << endl;
+	this->startingPosition = stoi(startingPosition);
+
+	cout << endl << "Pocetna pozicija: " << this->startingPosition << endl << endl << flush;
 
 	ifstream inputStream(inputFileName, ios::in);
 	if(inputStream.is_open()){
@@ -35,10 +38,11 @@ Assembler::Assembler(char* inputFileName){
 		cin >> a;
 		exit(1);
 	}
+	inputStream.close();
 
 	st = new SymTable();
 
-	lc = 0;
+	lc = this->startingPosition;
 	section_size = 0;
 	inside_section = false;
 	first_pass_completed = true;
@@ -50,6 +54,7 @@ Assembler::Assembler(char* inputFileName){
 	text_bytes = 0;
 	data_bytes = 0;
 	rodata_bytes = 0;
+	bss_bytes = 0;
 	current_size_of_text = 0;
 	current_size_of_data = 0;
 	current_size_of_rodata = 0;
@@ -60,20 +65,7 @@ Assembler::Assembler(char* inputFileName){
 
 	assemble();
 
-	cout << endl << "Bytes of text section" << endl << flush;
-	dumpSectionBytes(text_bytes, size_of_text, -1);
-	cout << endl << "Bytes of data section" << endl << flush;
-	dumpSectionBytes(data_bytes, size_of_data, -1);
-	cout << endl << "Bytes of rodata section" << endl << flush;
-	dumpSectionBytes(rodata_bytes, size_of_rodata, -1);
-
-
-	cout << endl << "Text Relocation Table" << endl << flush;
-	ret_text->dumpTable();
-	cout << endl << "Data Relocation Table" << endl << flush;
-	ret_data->dumpTable();
-	cout << endl << "Rodata Relocation Table" << endl << flush;
-	ret_rodata->dumpTable();
+	
 
 }
 
@@ -97,6 +89,8 @@ Assembler::~Assembler(){
 		delete data_bytes;
 	if(rodata_bytes!=0)
 		delete rodata_bytes;
+	if (bss_bytes != 0)
+		delete bss_bytes;
 }
 
 void Assembler::assemble() {
@@ -137,7 +131,7 @@ void Assembler::assemble() {
 		st->dumpTable();
 
 		//	For second parse the same, reset needed
-		lc = 0;
+		lc = startingPosition;
 		section_size = 0;
 		inside_section = false;
 		end_directive_reached = false;
@@ -169,16 +163,24 @@ void Assembler::assemble() {
 			for (int i = 0; i < size_of_rodata; i++)
 				rodata_bytes[i] = 0;
 		}
+		entry = st->getEntry(".bss");
+		if (entry != 0) {
+			size_of_bss = entry->getSize();
+			bss_bytes = new char[size_of_bss];
+		}
 
 		int i;
 		//	Second pass
 		for (i = 1; i < lines->getSize(); i++) {
 			//	Parse till the .end directive
 			if(!end_directive_reached)
-				secondPass(i);
+				if (!secondPass(i)) {
+					cout << endl << "SECOND PASS BROKEN" << endl << flush;
+					return;
+				}
 		}
 
-		cout << endl << "SECOND PASS COMPLETED" << endl;
+		cout << endl << endl << "SECOND PASS COMPLETED" << endl;
 		cout << endl << "Symbol Table:" << endl;
 
 		//	Add new global symbols that were not used but defined as extern that is global
@@ -186,7 +188,26 @@ void Assembler::assemble() {
 
 		//	Print symbol table
 		st->dumpTable();
+
+		cout << endl << flush;
+
+		cout << endl << endl << "Bytes of text section" << endl << endl << flush;
+		dumpSectionBytes(text_bytes, size_of_text, -1);
+		cout << endl << endl << "Bytes of data section" << endl << endl << flush;
+		dumpSectionBytes(data_bytes, size_of_data, -1);
+		cout << endl << endl << "Bytes of rodata section" << endl << endl << flush;
+		dumpSectionBytes(rodata_bytes, size_of_rodata, -1);
+		cout << endl << endl << "Bytes of bss section -> random bytes" << endl << endl << flush;
+		dumpSectionBytes(bss_bytes, size_of_bss, -1);
+
+		cout << endl << flush;
 		
+		cout << endl << "Text Relocation Table" << endl << flush;
+		ret_text->dumpTable();
+		cout << endl << "Data Relocation Table" << endl << flush;
+		ret_data->dumpTable();
+		cout << endl << "Rodata Relocation Table" << endl << flush;
+		ret_rodata->dumpTable();
 
 	}
 }
@@ -227,8 +248,8 @@ unsigned char Assembler::makeSecondByte(int dst, int addressing, int src)
 	char secondByte = 0;
 
 	dst <<= 5;
-	addressing <<= 2;
-	//	src is rightmost two bits so its ok
+	addressing <<= 3;
+	//	src is rightmost three bits so its ok
 
 	secondByte |= dst;
 	secondByte |= addressing;
@@ -244,22 +265,20 @@ void Assembler::makeAdditionalTwoBytes(char * src, int value)
 		int mask_higher = mask_lower << 8;
 
 		src[0] = value & mask_lower;
-		src[1] = value & mask_higher;
+		src[1] = ((value & mask_higher)>>8);
 	}
 	else {
 		cout << "Error: passed null pointer char as src string of bytes" << endl << flush;
 	}
 }
 
-void Assembler::printByteToHex(char byte, bool printNegative)
+void Assembler::printByteToHex(char byte )
 {
-	if (byte >= 0 && byte < 10)
+	if (byte >= 0 && byte < 16)
 		cout << "0";
 
-	if (byte < 0 && !printNegative) {
-		cout << hex << ((unsigned short)(byte) & (0x00ff));
-	} else
-		cout << hex << (unsigned short)( byte );
+	cout << hex << (unsigned short)(unsigned char)byte;
+	
 }
 
 void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
@@ -268,32 +287,19 @@ void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 	if (startingPosition == -1) {
 		if (section != 0 && size > 0) {
 			for (int i = 0; i < size; i++) {
-				if(count < 2)
-					printByteToHex(section[i], false);
-				else {
-					printByteToHex(section[i], true);
-					if (section[i] < 0) 
-						break;
-				}
-				count++;
+				printByteToHex(section[i]);
 			}
 		}
 	}
 	else {
 		if (section != 0 && size > 0) {
 			for (int i = startingPosition; i < size; i++) {
-				if (count < 2)
-					printByteToHex(section[i], false);
-				else {
-					printByteToHex(section[i], true);
-					if (section[i] < 0)
-						break;;
-				}
-				count++;
+				printByteToHex(section[i]);
 			}
 			cout << " " << flush;
 		}
 	}
+	cout << dec;
 }
 
 char * Assembler::getCurrentBytePointer()
@@ -437,7 +443,9 @@ bool Assembler::firstPass(int line) {
 						return true;	
 					}
 				} else if(current_section == ".rodata"){
-					int factor = 1;
+
+					int factor = 0;
+
 					if (*it == ".char") {
 						factor = 1;
 					} else if (*it == ".word") {
@@ -456,10 +464,12 @@ bool Assembler::firstPass(int line) {
 					}
 					int counter = 0;
 					while (it != instruction.end()) {
-						counter++;
 						it++;
+						if (it == instruction.end())
+							break;
+						it++;
+						counter += factor;
 					}
-					counter--;
 
 					//	Rodata section needs to have initializers
 					if (counter == 0) {
@@ -467,12 +477,14 @@ bool Assembler::firstPass(int line) {
 						return false;
 					}
 
-					lc += factor*counter;
-					section_size += factor*counter;
+					lc += counter;
+					section_size += counter;
 					return true;
 					
 				} else if (current_section == ".bss") {
-					int factor = 1;
+
+					int factor = 0;
+
 					if (*it == ".char") {
 						factor = 1;
 					}
@@ -506,10 +518,12 @@ bool Assembler::firstPass(int line) {
 					}
 					int counter = 0;
 					while (it != instruction.end()) {
-						counter++;
 						it++;
+						if (it == instruction.end())
+							break;
+						it++;
+						counter += factor;
 					}
-					counter--;
 
 					//	Bss section should not contain initializers
 					if (counter > 0) {
@@ -517,13 +531,21 @@ bool Assembler::firstPass(int line) {
 						return false;
 					}
 
-					lc += factor*counter;
-					section_size += factor*counter;
+					if (counter == 0) {
+						lc += factor;
+						section_size += factor;
+					}
+					else {
+						lc += counter;
+						section_size += counter;
+					}
 
 					return true;
 
 				} else {
-					int factor = 1;
+
+					int factor = 0;
+
 					if (*it == ".char") {
 						factor = 1;
 					}
@@ -559,13 +581,20 @@ bool Assembler::firstPass(int line) {
 					}
 					int counter = 0;
 					while (it != instruction.end()) {
-						counter++;
 						it++;
+						if (it == instruction.end())
+							break;
+						it++;
+						counter += factor;
 					}
-					counter--;
-
-					lc += factor*counter;
-					section_size += factor*counter;
+					if (counter == 0) {
+						lc += factor;
+						section_size += factor;
+					}
+					else {
+						lc += counter;
+						section_size += counter;
+					}
 					return true;
 				}
 
@@ -574,8 +603,12 @@ bool Assembler::firstPass(int line) {
 				//	Skip to label name
 				it++;
 				//	Create table entry
-				SymEntry *se = new SymEntry(*it, current_section, lc, Local, 0, NONE);
-				//	Add to table
+				SymEntry *se = new SymEntry(*it, current_section, lc, Local, 0, NONE, line);
+				//	Add to table if not already present otherwise error
+				if (st->getEntry(*it) != 0) {
+					cout << "Error: symbol ,," << *it << ",, is already defined, tried again at line: " << line << endl << flush;
+					return false;
+				}
 				st->addSymbolEntry(se);
 			//	All instructions are 2 bytes, if some operand is referencing memory or is immediate it will be added later
 			} else if (*it == "INSTRUCTION") {
@@ -616,6 +649,7 @@ bool Assembler::secondPass(int line) {
 		if ( (current_section == ".bss") && (*it != "SECTION"))
 			return true;
 
+		//	All addressing modes run with absolute relocation type, except PCRELPOM which uses relative relication type
 		RelocationType relocation_type = R_386_16;
 
 		string mem_operand;
@@ -625,6 +659,10 @@ bool Assembler::secondPass(int line) {
 
 			//	Next -> name of directive
 			it++;
+
+
+			// When putting label into .long or .word, you must increment size of section accordingly
+			int increment = 0;
 
 			if (*it == ".global") {
 				//	Next -> operand type
@@ -636,7 +674,8 @@ bool Assembler::secondPass(int line) {
 					if(se !=0)
 						se->setLocality(Global);
 					else {
-						se = new SymEntry(*it, "UNDEFINED", 0, Global, 0, NONE);
+						//	No must be calculated dynamically because otherwise No value of this entry will be used before finalizeTable() is called which is being called after second pass completes
+						se = new SymEntry(*it, "UNDEFINED", 0, Global, 0, NONE, st->getSymbolEntriesSize()+st->getFinalEntriesSize()+1);
 						st->addSymbolEntry(se);
 					}
 					//	Next -> operand type if exists otherwis it=instruction.end()
@@ -663,10 +702,17 @@ bool Assembler::secondPass(int line) {
 				it++;
 
 				getCurrentSectionSize() += stoi(*it);
+				increment = stoi(*it);
+
+				dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize() - increment);
+
+				return true;
 
 			} else if (*it == ".long") {
 				//	Skip to next token
 				it++;
+
+				increment = 4;
 
 				//	It can be without initializator
 				if (it != instruction.end()) {
@@ -713,6 +759,8 @@ bool Assembler::secondPass(int line) {
 				//	Skip to next token
 				it++;
 
+				increment = 2;
+
 				//	It can be without initializator
 				if (it != instruction.end()) {
 					
@@ -749,6 +797,8 @@ bool Assembler::secondPass(int line) {
 				//	Skip to next token
 				it++;
 
+				increment = 1;
+
 				//	It can be without initializator
 				if (it != instruction.end()) {
 					
@@ -769,11 +819,8 @@ bool Assembler::secondPass(int line) {
 							it++;
 						}
 						else {
-							it++;
-
-							mem_operand = *it;
-							
-							it++;
+							cout << endl << "Error: you can't use 2 byte value LABEL for 1 byte char, at line: " << line << endl << flush;
+							return false;
 						}
 					}
 				}
@@ -793,21 +840,31 @@ bool Assembler::secondPass(int line) {
 					if (symbol->getSection() == "UNDEFINED") {
 
 						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
-						
+
 						getCurrentRelSection()->addEntry(newEntry);
 
-						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]),0);
-						getCurrentSectionSize() += 2;
+						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), 0);
+						getCurrentSectionSize() += increment;
 					}
 					//	Symbol is defined in current section
 					else if (symbol->getSection() == current_section) {
-						
-						RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
 
-						getCurrentRelSection()->addEntry(newEntry);
+						if (symbol->getLocality() == Local) {
+							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
 
-						makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-						getCurrentSectionSize() += 2;
+							getCurrentRelSection()->addEntry(newEntry);
+
+							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+							getCurrentSectionSize() += increment;
+						}
+						else {
+							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+
+							getCurrentRelSection()->addEntry(newEntry);
+
+							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+							getCurrentSectionSize() += increment;
+						}
 					}
 					//	Symbol is defined in other section
 					else {
@@ -817,7 +874,7 @@ bool Assembler::secondPass(int line) {
 							getCurrentRelSection()->addEntry(newEntry);
 
 							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-							getCurrentSectionSize() += 2;
+							getCurrentSectionSize() += increment;
 						}
 						else {
 							RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
@@ -825,10 +882,13 @@ bool Assembler::secondPass(int line) {
 							getCurrentRelSection()->addEntry(newEntry);
 
 							makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-							getCurrentSectionSize() += 2;
+							getCurrentSectionSize() += increment;
 						}
 					}
+
 				}
+
+				dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize() - increment);
 			} 
 
 
@@ -902,8 +962,13 @@ bool Assembler::secondPass(int line) {
 			else if (*it == "shr")
 				instruction_opcode = 15;
 			else if (*it == "jmp") {
-				relocation_type = R_386_PC16;
-				instruction_opcode = 0;	//	ADD
+				//	If pcrel addressing use ADD instruction with relative R_386_PC16 relocation, otherwise for all others use MOV instruction with absolute R_386_16 relocation
+				if (!ParseTree::getInstructionField(instruction, "PCRELPOM").empty()) {
+					instruction_opcode = 0;	//	ADD
+				}
+				else {
+					instruction_opcode = 13; //	MOV
+				}
 			}
 			else if (*it == "ret") {
 				instruction_opcode = 10;
@@ -1026,11 +1091,14 @@ bool Assembler::secondPass(int line) {
 					has_additional_two_bytes = true;
 				}
 				else if (*it == "PCRELPOM") {
+
+					relocation_type = R_386_PC16;
+
 					it++;
 					mem_operand = *it;
 					
-					tmp_addressing = 3;
-					tmp_src_dst = 7;
+					tmp_addressing = 0;
+					tmp_src_dst = 0;
 					has_additional_two_bytes = true;
 				}
 				else if (*it == "IMMEDIATE") {
@@ -1052,6 +1120,15 @@ bool Assembler::secondPass(int line) {
 					dst = tmp_src_dst;
 				}
 				else {
+					src_addressing = tmp_addressing;
+					src = tmp_src_dst;
+				}
+
+				//	CALL and PUSH use src operand
+				if (ParseTree::getInstructionField(instruction, "INSTRUCTION") == "push" || ParseTree::getInstructionField(instruction, "INSTRUCTION") == "call" ) {
+					dst_addressing = 0;
+					dst = 0;
+
 					src_addressing = tmp_addressing;
 					src = tmp_src_dst;
 				}
@@ -1097,12 +1174,22 @@ bool Assembler::secondPass(int line) {
 							//	Symbol is defined in current section
 							else if (symbol->getSection() == current_section) {
 								
-								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+								if (symbol->getLocality() == Local) {
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
 
-								getCurrentRelSection()->addEntry(newEntry);
+									getCurrentRelSection()->addEntry(newEntry);
 
-								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
-								getCurrentSectionSize() += 2;
+									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+									getCurrentSectionSize() += 2;
+								}
+								else {
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, symbol->getNo());
+
+									getCurrentRelSection()->addEntry(newEntry);
+
+									makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue());
+									getCurrentSectionSize() += 2;
+								}
 							}
 							//	Symbol is defined in other section
 							else {
@@ -1136,18 +1223,19 @@ bool Assembler::secondPass(int line) {
 							}
 							//	Symbol is defined in current section
 							else if (symbol->getSection() == current_section) {
-								
+
 								RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
 
 								getCurrentRelSection()->addEntry(newEntry);
 
-								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue()-getCurrentSectionSize()+2);
+								makeAdditionalTwoBytes(&(getCurrentBytePointer()[getCurrentSectionSize()]), symbol->getValue() - (st->getEntry(current_section)->getValue() + getCurrentSectionSize() + 2));
 								getCurrentSectionSize() += 2;
+
 							}
 							//	Symbol is defined in other section
 							else {
 								if (symbol->getLocality() == Local) {
-									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(current_section)->getNo());
+									RelEntry* newEntry = new RelEntry(getCurrentSectionSize(), relocation_type, st->getEntry(symbol->getSection())->getNo());
 
 									getCurrentRelSection()->addEntry(newEntry);
 

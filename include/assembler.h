@@ -11,16 +11,19 @@
 class Assembler{
 
 public:
-    Assembler(char* inputFileName);
+    Assembler(char* inputFileName, char* startingPosition);
     ~Assembler();
 
 	static unsigned char makeFirstByte(int condition, int opcode, int addressing);
 	static unsigned char makeSecondByte(int dst, int addressing, int src);
 	static void makeAdditionalTwoBytes(char* src, int value);
-	static void printByteToHex(char byte, bool printNegative=true);
+	static void printByteToHex(char byte);
 	static void dumpSectionBytes(char* section, int size, int startingPosition);
 
 private:
+
+	int startingPosition;
+
 	Array *lines;	 
 	ParseTree *pt;
 
@@ -38,6 +41,8 @@ private:
 	char *rodata_bytes;
 	int size_of_rodata;
 	int current_size_of_rodata;
+	char *bss_bytes;
+	int size_of_bss;
 
 	char* getCurrentBytePointer();
 	RelTable* getCurrentRelSection();

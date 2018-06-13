@@ -16,7 +16,7 @@ RelTable::~RelTable()
 
 void RelTable::dumpTable()
 {
-	cout << "  OFFSET  |    TIP    |    VREDNOST  " << endl << flush;
+	cout << "  OFFSET  |    TIP    |    VREDNOST  " << endl << endl << flush;
 	for (map<int, RelEntry*>::iterator it = rel_entries.begin(); it != rel_entries.end(); it++) {
 		cout << it->second->getOffset() << " " << ((it->second->getRelocationType()==R_386_16) ? "R_386_16" : "R_386_PC16") << " " << it->second->getValue() << endl << flush;
 	}

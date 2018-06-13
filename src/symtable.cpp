@@ -17,7 +17,7 @@ SymTable::~SymTable() {
 void SymTable::dumpTable() {
 	if (!final_entries.empty()) {
 		cout << "|   REDNI BROJ   |   IME   |   SEKCIJA   |   VREDNOST   |   VIDLJIVOST   |   VELICINA   |   PRAVA PRISTUPA   |" << endl;
-		cout << "|------------------------------------------------------------------------------------------------------------|" << endl;
+		cout << "|------------------------------------------------------------------------------------------------------------|" << endl << endl;
 		cout << " 0 / UND 0 L 0 / " << endl;
 		for (map<int, SymEntry*>::iterator it = final_entries.begin(); it != final_entries.end(); it++) {
 
@@ -29,7 +29,7 @@ void SymTable::dumpTable() {
 			case READ_WRITE: accessrights = "READ_WRITE"; break;
 			}
 
-			cout << hex << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << accessrights << " " << endl;
+			cout << " " << it->first <<  " " << it->second->getName() << " " << it->second->getSection() << " " << it->second->getValue() << " " << ((it->second->getLocality()==0) ? "Local" : "Global")  << " "  << it->second->getSize() << " " << accessrights << " " << endl;
 		}
 		cout << endl << flush;
 	} else {
@@ -94,4 +94,25 @@ SymEntry * SymTable::getEntry(std::string name)
 		}
 	}
 	return 0;
+}
+
+int SymTable::getNo(std::string name)
+{
+	int counter = 0;
+	for (map<int, SymEntry*>::iterator it = symbol_entries.begin(); it != symbol_entries.end(); it++) {
+		counter++;
+		if (it->second->getName() == name)
+			return counter;
+	}
+	return -1;
+}
+
+int SymTable::getSymbolEntriesSize()
+{
+	return symbol_entries.size();
+}
+
+int SymTable::getFinalEntriesSize()
+{
+	return final_entries.size();
 }

@@ -326,7 +326,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	bool check_condition = false;
 
 	//	For more beautiful output
-	cout << endl << endl << flush;
+	//cout << endl << endl << flush;
 
 	for(unsigned i=0; i<line.size(); i++){	
 		
@@ -573,7 +573,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 							if (operands_expected == 1) {
 								while (i != line.size()) {
 									if (!isspace(line[i])) {
-										cout << "Erro: whitespace expected after operand, at line: " << lineNumber << endl << flush;
+										cout << "Error: whitespace expected after operand, at line: " << lineNumber << endl << flush;
 										return false;
 									}
 									i++;
@@ -1015,9 +1015,9 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					i++;
 					if (i == line.size()) {
 						//PARSED INSTRUCTION
-						for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
-							cout << *it << endl;
-						}
+						//for (list<string>::iterator it = instruction.begin(); it != instruction.end(); it++) {
+							//cout << *it << endl;
+						//}
 						parsed_instructions.insert(std::pair<int, list<string>>(lineNumber, instruction));
 						return true;
 					}
@@ -1125,9 +1125,9 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	}
 
 	//PARSED INSTRUCTION
-	for(list<string>::iterator it = instruction.begin(); it!=instruction.end(); it++){
-		cout << *it << endl;
-	}
+	//for(list<string>::iterator it = instruction.begin(); it!=instruction.end(); it++){
+		//cout << *it << endl;
+	//}
 
 	parsed_instructions.insert(std::pair<int,list<string>>(lineNumber, instruction));
 	

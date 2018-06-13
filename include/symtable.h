@@ -21,6 +21,10 @@ public:
 	SymTable* addSymbolEntry(SymEntry*);
 	SymEntry* getEntry(int no);
 	SymEntry* getEntry(std::string name);
+	int getNo(std::string name);
+
+	int getSymbolEntriesSize();
+	int getFinalEntriesSize();
 
 private:
 	std::map<int, SymEntry*> section_entries;
