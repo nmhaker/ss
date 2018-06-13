@@ -354,7 +354,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 					if (isalpha(line[i])) {
 						instruction.push_back("SYMBOL");
-					} else if (isdigit(line[i])) {
+					} else if (isdigit(line[i]) || checkNegative(line,i)) {
 						instruction.push_back("CONST");
 					} else if (line[i] == '.') {
 						instruction.push_back("SECTION");
@@ -363,7 +363,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 					//	Get symbol till whitespace or comma
 					//	Carry out whitespace
 					while (!isspace(line[i]) && (line[i]!=',') && (i < line.size())) {
-						if (!isalnum(line[i]) && !(line[i]=='.'&&getInstructionField(instruction, "DIRECTIVE")!=".global")) {
+						if (!checkNegative(line,i) && !isalnum(line[i]) && !(line[i]=='.'&&getInstructionField(instruction, "DIRECTIVE")!=".global")) {
 							cout << "Error: wrong symbol name at line: " << lineNumber << endl << flush;
 							return false;
 						}
@@ -449,7 +449,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						}
 					}
 					//	Immediate addressing
-					else if (isdigit(line[i])) {
+					else if (isdigit(line[i]) || checkNegative(line, i)) {
 
 						if (!checkAddressing(instruction, "IMMEDIATE")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
@@ -459,6 +459,9 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						instruction.push_back("IMMEDIATE");
 
 						if (getInstructionField(instruction, "DIRECTIVE") == ".char" || getInstructionField(instruction, "DIRECTIVE") == ".word" || getInstructionField(instruction, "DIRECTIVE") == ".long" || getInstructionField(instruction, "DIRECTIVE") == ".align" || getInstructionField(instruction, "DIRECTIVE") == ".skip" || getInstructionField(instruction, "INSTRUCTION") == "push" || operands_expected == 2) {
+
+							if(checkNegative(line, i))
+								symbol += line[i++];
 
 							while (isdigit(line[i]) && (i < line.size())) {
 								symbol += line[i];
@@ -719,8 +722,11 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 										operands_counter++;
 										continue;
 
-									} else if (isdigit(line[i])) {
+									} else if (isdigit(line[i]) || checkNegative(line, i)) {
 										instruction.push_back("CONST");
+
+										if (checkNegative(line, i))
+											symbol += line[i++];
 
 										while (isdigit(line[i]) && (i < line.size())) {
 											symbol += line[i];
@@ -781,7 +787,6 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 										cout << "Error: too much memory references, at line: " << lineNumber << endl;
 										return false;
 									}
-
 
 									instruction.push_back("MEMDIR");
 
@@ -1200,6 +1205,41 @@ bool ParseTree::checkForPSW(string line, int offset)
 			}
 	}
 	return false;
+}
+
+bool ParseTree::checkNegative(std::string str, int offset)
+{
+	bool minus_passed = false;
+	bool const_started = false;
+
+	for (unsigned i = offset; i < str.size(); i++) {
+
+		if (str[i] == '-') {
+			minus_passed = true;
+			continue;
+		}
+
+		if (!minus_passed)
+			return false;
+
+		if (isdigit(str[i])) {
+			if (!const_started) {
+				const_started = true;
+			}
+			continue;
+		}
+
+		if((isspace(str[i]) || str[i]==',' || str[i]==']') && const_started)
+			return true;
+		if (isspace(str[i]) && !const_started)
+			continue;
+
+		return false;
+	}
+	if (minus_passed)
+		return true;
+	else
+		return false;
 }
 
 bool ParseTree::checkAddressing(std::list<std::string> list, string addressing)

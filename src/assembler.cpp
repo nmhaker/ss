@@ -731,9 +731,9 @@ bool Assembler::secondPass(int line) {
 							int mask_first_8_bits = 255;
 
 							getCurrentBytePointer()[getCurrentSectionSize()++] = num & mask_first_8_bits;
-							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 8);
-							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 16);
-							getCurrentBytePointer()[getCurrentSectionSize()++] = num & (mask_first_8_bits << 24);
+							getCurrentBytePointer()[getCurrentSectionSize()++] = (num & (mask_first_8_bits << 8)) >> 8;
+							getCurrentBytePointer()[getCurrentSectionSize()++] = (num & (mask_first_8_bits << 16)) >> 16;
+							getCurrentBytePointer()[getCurrentSectionSize()++] = (num & (mask_first_8_bits << 24)) >> 24;
 
 							//cout << "BYTES FROM " << current_section << endl << flush;
 							dumpSectionBytes(getCurrentBytePointer(), getCurrentSectionSize(), getCurrentSectionSize()-4);

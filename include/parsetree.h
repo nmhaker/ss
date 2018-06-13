@@ -30,6 +30,7 @@ public:
 	int getReqOp(std::string);
 
 	static std::string getInstructionField(std::list<std::string>,std::string);
+	static bool checkNegative(std::string, int);
 
 private:
 	std::map<char, TreeNode*> root;
