@@ -71,6 +71,12 @@ SymTable* SymTable::addSymbolEntry(SymEntry *entry)
 	return this;
 }
 
+SymTable * SymTable::addEntry(SymEntry *entry)
+{
+	final_entries.insert(pair<int, SymEntry*>(final_entries.size()+1, entry));
+	return this;
+}
+
 SymEntry* SymTable::getEntry(int no)
 {
 	return final_entries.at(no);
@@ -115,4 +121,9 @@ int SymTable::getSymbolEntriesSize()
 int SymTable::getFinalEntriesSize()
 {
 	return final_entries.size();
+}
+
+std::map<int, SymEntry*>& SymTable::get_entries()
+{
+	return this->final_entries;
 }

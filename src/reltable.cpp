@@ -32,3 +32,8 @@ RelEntry * RelTable::getEntry(int no)
 {
 	return rel_entries.at(no);
 }
+
+std::map<int, RelEntry*>& RelTable::get_entries()
+{
+	return this->rel_entries;
+}

@@ -14,6 +14,8 @@ public:
 	RelTable* addEntry(RelEntry*);
 	RelEntry* getEntry(int no);
 
+	std::map<int, RelEntry*>& get_entries();
+
 private:
 	std::map<int, RelEntry*> rel_entries;
 };

@@ -63,10 +63,9 @@ Assembler::Assembler(char* inputFileName, char* startingPosition){
 	ret_data = new RelTable();
 	ret_rodata = new RelTable();
 
+	serializer = new Serializer(inputFileName, false);
+
 	assemble();
-
-	
-
 }
 
 Assembler::~Assembler(){
@@ -91,6 +90,8 @@ Assembler::~Assembler(){
 		delete rodata_bytes;
 	if (bss_bytes != 0)
 		delete bss_bytes;
+	if (serializer != 0)
+		delete serializer;
 }
 
 void Assembler::assemble() {
@@ -209,6 +210,14 @@ void Assembler::assemble() {
 		cout << endl << "Rodata Relocation Table" << endl << flush;
 		ret_rodata->dumpTable();
 
+		//	Serialize data to object file
+		serializer->serializeSymTable(st)->serializeRelTable(ret_text)->serializeRelTable(ret_rodata)->serializeRelTable(ret_data)->serializeRawData(text_bytes, size_of_text)->serializeRawData(rodata_bytes, size_of_rodata)->serializeRawData(data_bytes, size_of_data)->serializeRawData(bss_bytes, size_of_bss);
+
+		delete serializer;
+
+		serializer = new Serializer("objektni.o", true);
+
+		SymTable *new_symbol_table = serializer->toSymTable();
 	}
 }
 

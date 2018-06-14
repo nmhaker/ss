@@ -5,6 +5,7 @@
 #include "../include/parsetree.h"
 #include "../include/symtable.h"
 #include "../include/reltable.h"
+#include "../include/serializer.h"
 
 #include <string>
 
@@ -21,6 +22,8 @@ public:
 	static void dumpSectionBytes(char* section, int size, int startingPosition);
 
 private:
+
+	Serializer *serializer;
 
 	int startingPosition;
 
