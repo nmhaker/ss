@@ -8,26 +8,39 @@
 #include <fstream>
 using namespace std;
 
-Serializer::Serializer(char* fileName, bool read)
+Serializer::Serializer(char* fileName, bool read, elf_header* flags)
 {
+	this->flags = 0;
 
 	string str("objektni.o");
 	stream = new fstream();
-	if (!read)
+
+	if (!read) {
 		stream->open(str, ios::out | ios::binary);
-	else
+		serializeHeader(flags);
+	}
+	else {
 		stream->open(str, ios::in | ios::binary);
+	}
+
 	if (!stream) {
 		cout << "Error, binary stream is not open for writting binary file" << endl;
 	}
 
+	if(read)
+		readHeader();
+
+	lastRawSize = 0;
 }
 
 Serializer::~Serializer()
 {
 	stream->flush();
 	stream->close();
-	delete stream;
+	if(stream!=0)
+		delete stream;
+	if (flags != 0)
+		delete flags;
 }
 
 Serializer * Serializer::serializeSymTable(SymTable *st)
@@ -71,7 +84,7 @@ Serializer * Serializer::serializeRelEntry(RelEntry *re)
 
 Serializer * Serializer::serializeInt(int a)
 {
-	*stream << a;
+	stream->write((char*)&a, sizeof(int));
 	stream->flush();
 
 	return this;
@@ -96,6 +109,64 @@ Serializer * Serializer::serializeString(string str)
 
 }
 
+void Serializer::serializeHeader(elf_header* flags)
+{
+	stream->write((char*)flags, sizeof(elf_header));
+}
+
+elf_header * Serializer::readHeader()
+{
+	char *elfHeader = new char[sizeof(elf_header)];
+	stream->read(elfHeader, sizeof(elf_header));
+	this->flags = (elf_header*)elfHeader;
+	return this->flags;
+}
+
+ObjectFile * Serializer::makeObjectFile()
+{
+	ObjectFile* objFile = new ObjectFile();
+
+	objFile->setSymTable(toSymTable());
+	objFile->setRetData(toRelTable());
+	objFile->setRetRoData(toRelTable());
+	objFile->setRetText(toRelTable());
+	char*data = toRawData();
+	objFile->setBytesData(data, lastRawSize);
+	data = toRawData();
+	objFile->setBytesRoData(data, lastRawSize);
+	data = toRawData();
+	objFile->setBytesText(data, lastRawSize);
+	data = toRawData();
+	objFile->setBytesBss(data, lastRawSize);
+
+	return objFile;
+}
+
+int Serializer::readInt()
+{
+	int a;
+	stream->read((char*)&a, sizeof(int));
+	return a;
+}
+
+char Serializer::readChar()
+{
+	char c;
+	stream->read((char*)&c, sizeof(char));
+	return c;
+}
+
+std::string Serializer::readString()
+{
+	int size;
+	stream->read((char*)&size, sizeof(int));
+	char bytes[32];
+	stream->read(bytes, size);
+	bytes[size] = '\0';
+	string str(bytes);
+	return str;
+}
+
 Serializer * Serializer::serializeRawData(char * data, int size)
 {
 	serializeInt(size);
@@ -106,33 +177,21 @@ Serializer * Serializer::serializeRawData(char * data, int size)
 
 SymTable * Serializer::toSymTable()
 {
-	int size;
-	*stream >> size;
+	int size = readInt();
 
 	SymTable *st = new SymTable();
 	for (int i = 0; i < size; i++) {
-		int size_str_name;
-		*stream >> size_str_name;
-		char str_name[32];
-		stream->read(str_name, size_str_name);
-		int size_str_section;
-		*stream >> size_str_section;
-		char str_section[32];
-		stream->read(str_section, size_str_section);
-		int value;
-		int locality;
-		int size;
-		int accessRights;
-		int no;
-		*stream >> value;
-		*stream >> locality;
-		*stream >> size;
-		*stream >> accessRights;
-		*stream >> no;
+		string name = readString();
+		string section = readString();
+		int value = readInt();
+		int locality = readInt();
+		int size = readInt();
+		int accessRights = readInt();
+		int no = readInt();
 
-		string string_name(str_name);
-		string string_section(str_section);
-		SymEntry *se = new SymEntry(string_name, string_section, value, (Locality)locality,  size, (AccessRights)accessRights, no);
+		string string_name(name);
+		string string_section(section);
+		SymEntry *se = new SymEntry(name, section, value, (Locality)locality,  size, (AccessRights)accessRights, no);
 		st->addEntry(se);
 	}
 
@@ -141,17 +200,13 @@ SymTable * Serializer::toSymTable()
 
 RelTable * Serializer::toRelTable()
 {
-	int size;
-	*stream >> size;
+	int size = readInt();
 		
 	RelTable* relTable = new RelTable();
 	for (int i = 0; i < size; i++) {
-		int offset;
-		int type;
-		int symbol;
-		*stream >> offset;
-		*stream >> type;
-		*stream >> symbol;
+		int offset = readInt();
+		int type = readInt();
+		int symbol = readInt();
 		RelEntry* entry = new RelEntry(offset, (RelocationType)type, symbol);
 		relTable->addEntry(entry);
 	}
@@ -161,8 +216,8 @@ RelTable * Serializer::toRelTable()
 
 char * Serializer::toRawData()
 {
-	int size;
-	*stream >> size;
+	int size = readInt();
+	lastRawSize = size;
 	char *bytes = new char[size];
 	stream->read(bytes, size);
 	return bytes;

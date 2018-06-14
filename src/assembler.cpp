@@ -14,6 +14,7 @@ Assembler::Assembler(char* inputFileName, char* startingPosition){
 //	cout << "Konstruktor" << endl;	
 //	cout << "Input file: " << inputFileName << endl;
 	this->startingPosition = stoi(startingPosition);
+	this->inputFileName = inputFileName;
 
 	cout << endl << "Pocetna pozicija: " << this->startingPosition << endl << endl << flush;
 
@@ -63,7 +64,6 @@ Assembler::Assembler(char* inputFileName, char* startingPosition){
 	ret_data = new RelTable();
 	ret_rodata = new RelTable();
 
-	serializer = new Serializer(inputFileName, false);
 
 	assemble();
 }
@@ -210,14 +210,60 @@ void Assembler::assemble() {
 		cout << endl << "Rodata Relocation Table" << endl << flush;
 		ret_rodata->dumpTable();
 
-		//	Serialize data to object file
-		serializer->serializeSymTable(st)->serializeRelTable(ret_text)->serializeRelTable(ret_rodata)->serializeRelTable(ret_data)->serializeRawData(text_bytes, size_of_text)->serializeRawData(rodata_bytes, size_of_rodata)->serializeRawData(data_bytes, size_of_data)->serializeRawData(bss_bytes, size_of_bss);
+		elf_header header;
 
-		delete serializer;
+		if (ret_data->get_entries().size() > 0) {
+			header.has_data_ret = 1;
+		}
+		if (ret_rodata->get_entries().size() > 0) {
+			header.has_rodata_ret = 1;
+		}
+		if (ret_text->get_entries().size() > 0) {
+			header.has_text_ret = 1;
+		}
+		if (size_of_data > 0) {
+			header.has_raw_data = 1;
+		}
+		if (size_of_rodata > 0) {
+			header.has_raw_rodata = 1;
+		}
+		if (size_of_text > 0) {
+			header.has_raw_text = 1;
+		}
+		if (size_of_bss > 0) {
+			header.has_raw_bss = 1;
+		}
 
-		serializer = new Serializer("objektni.o", true);
+		serializer = new Serializer(inputFileName, false, &header);
+		serializer->serializeSymTable(st);
 
-		SymTable *new_symbol_table = serializer->toSymTable();
+		if (ret_data->get_entries().size() > 0) {
+			serializer->serializeRelTable(ret_data);
+		}
+		if (ret_rodata->get_entries().size() > 0) {
+			serializer->serializeRelTable(ret_rodata);
+		}
+		if (ret_text->get_entries().size() > 0) {
+			serializer->serializeRelTable(ret_text);
+		}
+		if (size_of_data > 0) {
+			serializer->serializeRawData(data_bytes, size_of_data);
+		}
+		if (size_of_rodata > 0) {
+			serializer->serializeRawData(rodata_bytes, size_of_rodata);
+		}
+		if (size_of_text > 0) {
+			serializer->serializeRawData(text_bytes, size_of_text);
+		}
+		if (size_of_bss > 0) {
+			serializer->serializeRawData(bss_bytes, size_of_bss);
+		}
+
+		//delete serializer;
+
+		//serializer = new Serializer(inputFileName, true);
+
+		//ObjectFile *of = serializer->makeObjectFile();
 	}
 }
 
@@ -1110,7 +1156,10 @@ bool Assembler::secondPass(int line) {
 
 					it++;
 
-					tmp_addressing = 2;
+					if (instruction_opcode == 11) { //	Need to set immed for CALL instruction, otherwise, doesnt jump on label but on value that label points to
+						tmp_addressing = 0;
+					}else
+						tmp_addressing = 2;
 					has_additional_two_bytes = true;
 
 					mem_operand = *it;

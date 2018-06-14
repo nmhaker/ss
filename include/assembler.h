@@ -23,6 +23,8 @@ public:
 
 private:
 
+	char* inputFileName;
+
 	Serializer *serializer;
 
 	int startingPosition;
