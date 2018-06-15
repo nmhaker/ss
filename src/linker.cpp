@@ -189,8 +189,8 @@ bool Linker::relocateEntries()
 				//	Get value of resolved symbol
 				int value = symTable->getEntry(it->second->getValue())->getValue();
 
-				char first_byte = bytes[offset+1];
-				char second_byte = bytes[offset];
+				char first_byte = bytes[offset];
+				char second_byte = bytes[offset+1];
 				
 				short coded_value = 0;
 				coded_value |= first_byte;
@@ -215,13 +215,14 @@ bool Linker::relocateEntries()
 				first_byte = value & 255;
 				second_byte = ( (value & (255 << 8)) >> 8);
 
-				bytes[offset] = second_byte;
-				bytes[offset + 1] = first_byte;
+				bytes[offset] = first_byte;
+				bytes[offset + 1] = second_byte;
 
 			}
 
 			cout << endl << "DUMPING RELOCATED BYTES FOR SECTION RODATA" << endl << flush;
 			Assembler::dumpSectionBytes(objectFile[i]->getBytesRodata(), objectFile[i]->getRodataSize(), -1);
+			cout << endl << flush;
 
 		} 
 		if (header->has_data_ret) {
@@ -240,8 +241,8 @@ bool Linker::relocateEntries()
 				//	Get value of resolved symbol
 				int value = symTable->getEntry(it->second->getValue())->getValue();
 
-				char first_byte = bytes[offset + 1];
-				char second_byte = bytes[offset];
+				char first_byte = bytes[offset];
+				char second_byte = bytes[offset+1];
 
 				short coded_value = 0;
 				coded_value |= first_byte;
@@ -267,13 +268,14 @@ bool Linker::relocateEntries()
 				first_byte = coded_value & 255;
 				second_byte = ((coded_value & (255 << 8)) >> 8);
 
-				bytes[offset] = second_byte;
-				bytes[offset + 1] = first_byte;
+				bytes[offset] = first_byte;
+				bytes[offset + 1] = second_byte;
 
 			}
 
 			cout << endl << "DUMPING RELOCATED BYTES FOR SECTION DATA" << endl << flush;
 			Assembler::dumpSectionBytes(objectFile[i]->getBytesData(), objectFile[i]->getDataSize(), -1);
+			cout << endl << flush;
 
 		} 
 		if (header->has_text_ret) {
@@ -291,8 +293,8 @@ bool Linker::relocateEntries()
 				//	Get value of resolved symbol
 				int value = symTable->getEntry(it->second->getValue())->getValue();
 
-				char first_byte = bytes[offset + 1];
-				char second_byte = bytes[offset];
+				char first_byte = bytes[offset];
+				char second_byte = bytes[offset+1];
 
 				short coded_value = 0;
 				coded_value |= first_byte;
@@ -318,13 +320,14 @@ bool Linker::relocateEntries()
 				first_byte = coded_value & 255;
 				second_byte = ((coded_value & (255 << 8)) >> 8);
 
-				bytes[offset] = second_byte;
-				bytes[offset + 1] = first_byte;
+				bytes[offset] = first_byte;
+				bytes[offset + 1] = second_byte;
 
 			}
 
 			cout << endl << "DUMPING RELOCATED BYTES FOR SECTION TEXT" << endl << flush;
 			Assembler::dumpSectionBytes(objectFile[i]->getBytesText(), objectFile[i]->getTextSize(), -1);
+			cout << endl << flush;
 		}
 
 	}
