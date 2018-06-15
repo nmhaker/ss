@@ -336,8 +336,8 @@ bool Linker::relocateEntries()
 char* Linker::makeExecutable()
 {
 	//	Memory for emulator, that is its virtual address space
-	char* v_space = new char[1 << 15];
-	for (int i = 0; i < (1 << 15); i++)
+	char* v_space = new char[1 << 16];
+	for (int i = 0; i < (1 << 16); i++)
 		v_space[i] = 0;
 
 	for (int i = 0; i < numOfObjectFiles; i++) {
@@ -373,7 +373,7 @@ char* Linker::makeExecutable()
 				}
 
 				for (int j = offset; j < offset + size; j++) {
-					v_space[j] = bytes[j];
+					v_space[j] = bytes[j-offset];
 				}
 
 				offset += size;
@@ -383,4 +383,9 @@ char* Linker::makeExecutable()
 	}
 
 	return v_space;
+}
+
+int Linker::getStartLocation()
+{
+	return this->START;
 }

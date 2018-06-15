@@ -340,6 +340,7 @@ void Assembler::printByteToHex(char byte )
 
 void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 {
+	cout << endl << flush;
 	int count = 0;
 	if (startingPosition == -1) {
 		if (section != 0 && size > 0) {
@@ -352,8 +353,8 @@ void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 		if (section != 0 && size > 0) {
 			for (int i = startingPosition; i < size+startingPosition; i++) {
 				printByteToHex(section[i]);
+				cout << " " << flush;
 			}
-			cout << " " << flush;
 		}
 	}
 	cout << dec;

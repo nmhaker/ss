@@ -11,6 +11,7 @@ public:
 	~Linker();
 
 	char* makeExecutable();
+	int getStartLocation();
 
 private:
 
