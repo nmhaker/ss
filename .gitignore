@@ -4,3 +4,4 @@ fajl.asm
 fajl_bk.asm
 fajl.asm
 include/Linker.h
+src/Linker.cpp
