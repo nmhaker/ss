@@ -1,11 +1,11 @@
 #ifndef SERIALIZER_H
 #define SERIALIZER_H
 
-#include "../include/symentry.h"
-#include "../include/symtable.h"
-#include "../include/relentry.h"
-#include "../include/reltable.h"
-#include "../include/objectfile.h"
+#include "symentry.h"
+#include "symtable.h"
+#include "relentry.h"
+#include "reltable.h"
+#include "objectfile.h"
 
 #include <fstream>
 
@@ -18,6 +18,7 @@ struct elf_header {
 		has_raw_rodata = 0;
 		has_raw_text = 0;
 		has_raw_bss = 0;
+		startAddress = 0;
 	}
 	char has_data_ret;
 	char has_rodata_ret;
@@ -26,6 +27,7 @@ struct elf_header {
 	char has_raw_rodata;
 	char has_raw_text;
 	char has_raw_bss;
+	int startAddress;
 };
 
 class Serializer {
@@ -41,7 +43,7 @@ public:
 	SymTable* toSymTable();
 	RelTable* toRelTable();
 	char* toRawData();
-
+	
 	ObjectFile* makeObjectFile();
 
 private:

@@ -17,6 +17,8 @@ ObjectFile::ObjectFile()
 	this->size_of_data = 0;
 	this->size_of_rodata = 0;
 	this->size_of_text = 0;
+
+	this->header = 0;
 }
 
 ObjectFile::~ObjectFile()
@@ -37,6 +39,11 @@ ObjectFile::~ObjectFile()
 		delete this->ret_rodata;
 	if (this->ret_text != 0 )
 		delete this->ret_text;
+}
+
+void ObjectFile::setHeader(elf_header *header)
+{
+	this->header = header;
 }
 
 void ObjectFile::setSymTable(SymTable *symTable)
@@ -81,6 +88,11 @@ void ObjectFile::setBytesBss(char *bss, int size)
 {
 	this->bytes_bss = bss;
 	this->size_of_bss = size;
+}
+
+elf_header * ObjectFile::getHeader()
+{
+	return this->header;
 }
 
 SymTable * ObjectFile::getSymTable()
@@ -141,4 +153,9 @@ int ObjectFile::getRodataSize()
 int ObjectFile::getBssSize()
 {
 	return this->size_of_bss;
+}
+
+int ObjectFile::getFileSize()
+{
+	return size_of_text + size_of_data + size_of_rodata + size_of_bss;
 }

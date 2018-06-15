@@ -12,7 +12,7 @@ Serializer::Serializer(char* fileName, bool read, elf_header* flags)
 {
 	this->flags = 0;
 
-	string str("objektni.o");
+	string str(fileName);
 	stream = new fstream();
 
 	if (!read) {
@@ -25,6 +25,7 @@ Serializer::Serializer(char* fileName, bool read, elf_header* flags)
 
 	if (!stream) {
 		cout << "Error, binary stream is not open for writting binary file" << endl;
+		exit(1);
 	}
 
 	if(read)
@@ -39,14 +40,23 @@ Serializer::~Serializer()
 	stream->close();
 	if(stream!=0)
 		delete stream;
-	if (flags != 0)
-		delete flags;
 }
 
 Serializer * Serializer::serializeSymTable(SymTable *st)
 {
-	serializeInt(st->get_entries().size());
+	int counter = 0;
 	for (map<int, SymEntry*>::iterator it = st->get_entries().begin(); it != st->get_entries().end(); it++) {
+		if ((it->second->getName() != it->second->getSection()) && (it->second->getLocality() == Local))
+			continue;
+		counter++;
+	}
+	serializeInt(counter);
+	for (map<int, SymEntry*>::iterator it = st->get_entries().begin(); it != st->get_entries().end(); it++) {
+		
+		//	Skip local symbols during serialization
+		if ( (it->second->getName() != it->second->getSection()) && (it->second->getLocality() == Local))
+			continue;
+
 		serializeSymEntry(it->second);
 	}
 	return this;
@@ -126,11 +136,15 @@ ObjectFile * Serializer::makeObjectFile()
 {
 	ObjectFile* objFile = new ObjectFile();
 
+	objFile->setHeader(flags);
+
 	objFile->setSymTable(toSymTable());
 	objFile->setRetData(toRelTable());
 	objFile->setRetRoData(toRelTable());
 	objFile->setRetText(toRelTable());
+
 	char*data = toRawData();
+
 	objFile->setBytesData(data, lastRawSize);
 	data = toRawData();
 	objFile->setBytesRoData(data, lastRawSize);
@@ -191,6 +205,7 @@ SymTable * Serializer::toSymTable()
 
 		string string_name(name);
 		string string_section(section);
+
 		SymEntry *se = new SymEntry(name, section, value, (Locality)locality,  size, (AccessRights)accessRights, no);
 		st->addEntry(se);
 	}

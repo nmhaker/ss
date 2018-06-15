@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-#include "../include/symentry.h"
+#include "symentry.h"
 
 class SymTable {
 

@@ -233,8 +233,9 @@ void Assembler::assemble() {
 		if (size_of_bss > 0) {
 			header.has_raw_bss = 1;
 		}
+		header.startAddress = this->startingPosition;
 
-		serializer = new Serializer(inputFileName, false, &header);
+		serializer = new Serializer("object.o", false, &header);
 		serializer->serializeSymTable(st);
 
 		if (ret_data->get_entries().size() > 0) {
@@ -259,11 +260,12 @@ void Assembler::assemble() {
 			serializer->serializeRawData(bss_bytes, size_of_bss);
 		}
 
-		//delete serializer;
+		delete serializer;
 
-		//serializer = new Serializer(inputFileName, true);
+		serializer = new Serializer("object.o", true);
 
-		//ObjectFile *of = serializer->makeObjectFile();
+		ObjectFile *of = serializer->makeObjectFile();
+
 	}
 }
 

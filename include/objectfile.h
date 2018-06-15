@@ -1,8 +1,11 @@
 #ifndef OBJECTFILE_H
 #define OBJECTFILE_H
 
+//#include "serializer.h"
 #include "symtable.h"
 #include "reltable.h"
+
+struct elf_header;
 
 class ObjectFile {
 public:
@@ -10,6 +13,7 @@ public:
 	ObjectFile();
 	~ObjectFile();
 
+	void setHeader(elf_header*);
 	void setSymTable(SymTable*);
 	void setRetText(RelTable*);
 	void setRetData(RelTable*);
@@ -19,6 +23,7 @@ public:
 	void setBytesRoData(char*, int);
 	void setBytesBss(char*, int);
 
+	elf_header* getHeader();
 	SymTable* getSymTable();
 	RelTable* getRetText();
 	RelTable* getRetData();
@@ -32,7 +37,11 @@ public:
 	int getRodataSize();
 	int getBssSize();
 
+	int getFileSize();
+
 private:
+
+	elf_header* header;
 
 	SymTable* symTable;
 	RelTable* ret_text;

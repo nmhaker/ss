@@ -7,12 +7,17 @@
 class Linker
 {
 public:
-	Linker(char* inputFileName);
+	Linker(int num, char** files);
 	~Linker();
 
+	bool resolve();
+
 private:
-	Serializer* serializer;
-	ObjectFile* objectFile;
+
+	bool checkOverLapping();
+
+	ObjectFile** objectFile;
+	int numOfObjectFiles;
 };
 
 #endif
