@@ -15,6 +15,8 @@ public:
 private:
 
 	bool checkOverLapping();
+	bool resolveUndefinedSymbols();
+	bool relocateEntries();
 
 	ObjectFile** objectFile;
 	int numOfObjectFiles;
