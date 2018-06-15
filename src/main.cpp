@@ -20,8 +20,5 @@ int main(int argc, char** argv){
 
 	cout << endl << "Successfully finished assembling" << endl << flush;
 
-	char in;
-	cin >> in;
-
 	return 0;
 }
