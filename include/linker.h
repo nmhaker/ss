@@ -10,16 +10,19 @@ public:
 	Linker(int num, char** files);
 	~Linker();
 
-	bool resolve();
+	char* makeExecutable();
 
 private:
 
+	bool resolve();
 	bool checkOverLapping();
 	bool resolveUndefinedSymbols();
 	bool relocateEntries();
 
 	ObjectFile** objectFile;
 	int numOfObjectFiles;
+
+	int START;
 };
 
 #endif

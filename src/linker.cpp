@@ -33,6 +33,7 @@ Linker::~Linker()
 		if (objectFile[i] != 0)
 			delete objectFile[i];
 	}
+	delete[] objectFile;
 }
 
 bool Linker::resolve()
@@ -78,6 +79,9 @@ bool Linker::resolveUndefinedSymbols()
 	//	Strong symbol < NAME, FILE >
 	map<string, int> strongSymbols;
 
+	//	Symbol start must be defined for emulator
+	START = -1;
+	
 	//	Resolve table symbols and keep track of strong symbols for preventing multiple definitions
 	for (int i = 0; i < numOfObjectFiles; i++) {
 
@@ -90,6 +94,9 @@ bool Linker::resolveUndefinedSymbols()
 		map<int, SymEntry*> current_entries = current->get_entries();
 
 		for (map<int, SymEntry*>::iterator it = current_entries.begin(); it != current_entries.end(); it++) {
+
+			if (it->second->getName() == "START")
+				START = it->second->getValue();
 
 			//	Check for strong symbol
 			if ((it->second->getSection() != "UNDEFINED") && (it->second->getLocality() == Global)) {
@@ -146,7 +153,13 @@ bool Linker::resolveUndefinedSymbols()
 		cout << endl << " --- RESOLVED [" << i << "] SYMBOL TABLE --- " << endl << flush;
 		objectFile[i]->getSymTable()->dumpTable();
 	}
-	return true;
+
+	if(START >= 0)
+		return true;
+	else {
+		cout << endl << "Linker error: could not find START symbol" << endl << flush;
+		return false;
+	}
 }
 
 bool Linker::relocateEntries()
@@ -318,4 +331,56 @@ bool Linker::relocateEntries()
 
 
 	return true;
+}
+
+char* Linker::makeExecutable()
+{
+	//	Memory for emulator, that is its virtual address space
+	char* v_space = new char[1 << 15];
+	for (int i = 0; i < (1 << 15); i++)
+		v_space[i] = 0;
+
+	for (int i = 0; i < numOfObjectFiles; i++) {
+
+		ObjectFile* file = objectFile[i];
+		map<int, SymEntry*> entries = file->getSymTable()->get_entries();
+
+		int	offset = file->getHeader()->startAddress;
+
+		int counter = 1;
+
+		try {
+			while (entries.at(counter)->getName() == entries.at(counter)->getSection()) {
+
+				char* bytes = 0;
+				int size = 0;
+
+				if (entries.at(counter)->getName() == ".rodata") {
+					bytes = file->getBytesRodata();
+					size = file->getRodataSize();
+				}
+				else if (entries.at(counter)->getName() == ".data") {
+					bytes = file->getBytesData();
+					size = file->getDataSize();
+				}
+				else if (entries.at(counter)->getName() == ".bss") {
+					bytes = file->getBytesBss();
+					size = file->getBssSize();
+				}
+				else if (entries.at(counter)->getName() == ".text") {
+					bytes = file->getBytesText();
+					size = file->getTextSize();
+				}
+
+				for (int j = offset; j < offset + size; j++) {
+					v_space[j] = bytes[j];
+				}
+
+				offset += size;
+				counter++;
+			}
+		} catch (out_of_range e) {}
+	}
+
+	return v_space;
 }

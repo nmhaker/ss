@@ -3,3 +3,4 @@ prog
 fajl.asm
 fajl_bk.asm
 fajl.asm
+include/Linker.h

@@ -350,7 +350,7 @@ void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 	}
 	else {
 		if (section != 0 && size > 0) {
-			for (int i = startingPosition; i < size; i++) {
+			for (int i = startingPosition; i < size+startingPosition; i++) {
 				printByteToHex(section[i]);
 			}
 			cout << " " << flush;
