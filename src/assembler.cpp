@@ -260,11 +260,11 @@ void Assembler::assemble() {
 			serializer->serializeRawData(bss_bytes, size_of_bss);
 		}
 
-		delete serializer;
+		//delete serializer;
 
-		serializer = new Serializer("object.o", true);
+		//serializer = new Serializer("object.o", true);
 
-		ObjectFile *of = serializer->makeObjectFile();
+		//ObjectFile *of = serializer->makeObjectFile();
 
 	}
 }

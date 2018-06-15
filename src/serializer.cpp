@@ -207,7 +207,7 @@ SymTable * Serializer::toSymTable()
 		string string_section(section);
 
 		SymEntry *se = new SymEntry(name, section, value, (Locality)locality,  size, (AccessRights)accessRights, no);
-		st->addEntry(se);
+		st->addPairEntry(no, se);
 	}
 
 	return st;

@@ -21,6 +21,9 @@ public:
 	SymTable* addSymbolEntry(SymEntry*);
 	SymTable* addEntry(SymEntry*);
 
+	//	Needed by linker
+	SymTable* addPairEntry(int, SymEntry*);
+
 	SymEntry* getEntry(int no);
 	SymEntry* getEntry(std::string name);
 

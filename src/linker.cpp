@@ -44,6 +44,37 @@ bool Linker::resolve()
 		return false;
 	}
 
+	//	Resolve undefined symbols
+	if (!resolveUndefinedSymbols())
+		return false;
+	
+	//	Rewrite bytes from relocation entries
+	if (!relocateEntries())
+		return false;
+
+	return true;
+}
+
+bool Linker::checkOverLapping()
+{
+	for (int i = 0; i < numOfObjectFiles-1; i++) {
+		for (int j = i+1; j < numOfObjectFiles; j++) {
+			if (  objectFile[j]->getHeader()->startAddress > objectFile[i]->getHeader()->startAddress){
+				if (  objectFile[i]->getHeader()->startAddress + objectFile[i]->getFileSize() > objectFile[j]->getHeader()->startAddress ) {
+					return false;
+				}
+			} else {
+				if (objectFile[j]->getHeader()->startAddress + objectFile[j]->getFileSize() > objectFile[i]->getHeader()->startAddress) {
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}
+
+bool Linker::resolveUndefinedSymbols()
+{
 	//	Strong symbol < NAME, FILE >
 	map<string, int> strongSymbols;
 
@@ -115,25 +146,176 @@ bool Linker::resolve()
 		cout << endl << " --- RESOLVED [" << i << "] SYMBOL TABLE --- " << endl << flush;
 		objectFile[i]->getSymTable()->dumpTable();
 	}
-
 	return true;
-
 }
 
-bool Linker::checkOverLapping()
+bool Linker::relocateEntries()
 {
-	for (int i = 0; i < numOfObjectFiles-1; i++) {
-		for (int j = i+1; j < numOfObjectFiles; j++) {
-			if (  objectFile[j]->getHeader()->startAddress > objectFile[i]->getHeader()->startAddress){
-				if (  objectFile[i]->getHeader()->startAddress + objectFile[i]->getFileSize() > objectFile[j]->getHeader()->startAddress ) {
+	//	Take object files
+	for (int i = 0; i < numOfObjectFiles; i++) {
+		
+		ObjectFile* object = objectFile[i];
+
+		SymTable* symTable = object->getSymTable();
+
+		elf_header* header = object->getHeader();
+				
+		if (header->has_rodata_ret) {
+
+			RelTable* rodata_ret = object->getRetRodata();
+			map<int, RelEntry*> rodata_entries = rodata_ret->get_entries();
+
+			for (map<int, RelEntry*>::iterator it = rodata_entries.begin(); it != rodata_entries.end(); it++) {
+
+				//	Byte array
+				char* bytes = object->getBytesRodata();
+
+				//	Get offset to bytes which need modification
+				int offset = it->second->getOffset();
+
+				//	Get value of resolved symbol
+				int value = symTable->getEntry(it->second->getValue())->getValue();
+
+				char first_byte = bytes[offset+1];
+				char second_byte = bytes[offset];
+				
+				short coded_value = 0;
+				coded_value |= first_byte;
+				coded_value |= (second_byte << 8);
+
+				//	Absolute relocation
+				if (it->second->getRelocationType() == R_386_16) {
+
+					value += coded_value;
+
+				} 
+				//	PC Relative relocation
+				else if (it->second->getRelocationType() == R_386_PC16) {
+					
+					value += coded_value - (symTable->getEntry(".rodata")->getValue() + offset);
+
+				} else {
+					cout << endl << "Linker error: unsupported relocation type" << endl << flush;
 					return false;
 				}
-			} else {
-				if (objectFile[j]->getHeader()->startAddress + objectFile[j]->getFileSize() > objectFile[i]->getHeader()->startAddress) {
-					return false;
-				}
+
+				first_byte = value & 255;
+				second_byte = ( (value & (255 << 8)) >> 8);
+
+				bytes[offset] = second_byte;
+				bytes[offset + 1] = first_byte;
+
 			}
+
+			cout << endl << "DUMPING RELOCATED BYTES FOR SECTION RODATA" << endl << flush;
+			Assembler::dumpSectionBytes(objectFile[i]->getBytesRodata(), objectFile[i]->getRodataSize(), -1);
+
+		} 
+		if (header->has_data_ret) {
+
+			RelTable* data_ret = object->getRetData();
+			map<int, RelEntry*> data_entries = data_ret->get_entries();
+
+			for (map<int, RelEntry*>::iterator it = data_entries.begin(); it != data_entries.end(); it++) {
+
+				//	Byte array
+				char* bytes = object->getBytesData();
+
+				//	Get offset to bytes which need modification
+				int offset = it->second->getOffset();
+
+				//	Get value of resolved symbol
+				int value = symTable->getEntry(it->second->getValue())->getValue();
+
+				char first_byte = bytes[offset + 1];
+				char second_byte = bytes[offset];
+
+				short coded_value = 0;
+				coded_value |= first_byte;
+				coded_value |= (second_byte << 8);
+
+				//	Absolute relocation
+				if (it->second->getRelocationType() == R_386_16) {
+
+					value += coded_value;
+
+				}
+				//	PC Relative relocation
+				else if (it->second->getRelocationType() == R_386_PC16) {
+
+					value += coded_value - (symTable->getEntry(".data")->getValue() + offset);
+
+				}
+				else {
+					cout << endl << "Linker error: unsupported relocation type" << endl << flush;
+					return false;
+				}
+
+				first_byte = coded_value & 255;
+				second_byte = ((coded_value & (255 << 8)) >> 8);
+
+				bytes[offset] = second_byte;
+				bytes[offset + 1] = first_byte;
+
+			}
+
+			cout << endl << "DUMPING RELOCATED BYTES FOR SECTION DATA" << endl << flush;
+			Assembler::dumpSectionBytes(objectFile[i]->getBytesData(), objectFile[i]->getDataSize(), -1);
+
+		} 
+		if (header->has_text_ret) {
+
+			RelTable* text_ret = object->getRetText();
+			map<int, RelEntry*> text_entries = text_ret->get_entries();
+			for (map<int, RelEntry*>::iterator it = text_entries.begin(); it != text_entries.end(); it++) {
+
+				//	Byte array
+				char* bytes = object->getBytesText();
+
+				//	Get offset to bytes which need modification
+				int offset = it->second->getOffset();
+
+				//	Get value of resolved symbol
+				int value = symTable->getEntry(it->second->getValue())->getValue();
+
+				char first_byte = bytes[offset + 1];
+				char second_byte = bytes[offset];
+
+				short coded_value = 0;
+				coded_value |= first_byte;
+				coded_value |= (second_byte << 8);
+
+				//	Absolute relocation
+				if (it->second->getRelocationType() == R_386_16) {
+
+					value += coded_value;
+
+				}
+				//	PC Relative relocation
+				else if (it->second->getRelocationType() == R_386_PC16) {
+
+					value += coded_value - (symTable->getEntry(".text")->getValue() + offset);
+
+				}
+				else {
+					cout << endl << "Linker error: unsupported relocation type" << endl << flush;
+					return false;
+				}
+
+				first_byte = coded_value & 255;
+				second_byte = ((coded_value & (255 << 8)) >> 8);
+
+				bytes[offset] = second_byte;
+				bytes[offset + 1] = first_byte;
+
+			}
+
+			cout << endl << "DUMPING RELOCATED BYTES FOR SECTION TEXT" << endl << flush;
+			Assembler::dumpSectionBytes(objectFile[i]->getBytesText(), objectFile[i]->getTextSize(), -1);
 		}
+
 	}
+
+
 	return true;
 }

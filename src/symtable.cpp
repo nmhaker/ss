@@ -77,6 +77,12 @@ SymTable * SymTable::addEntry(SymEntry *entry)
 	return this;
 }
 
+SymTable * SymTable::addPairEntry(int no, SymEntry *entry)
+{
+	final_entries.insert(pair<int, SymEntry*>(no, entry));
+	return this;
+}
+
 SymEntry* SymTable::getEntry(int no)
 {
 	return final_entries.at(no);
