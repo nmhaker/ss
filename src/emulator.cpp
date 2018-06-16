@@ -15,6 +15,8 @@ Emulator::Emulator(int argc, char** argv)
 	
 	regs[SP] = 0xff80;
 
+	psw = 1;
+
 	startMainLoop();
 }
 
@@ -50,43 +52,69 @@ void Emulator::startMainLoop()
 		short firstOperand = getOperand(dstaddr, dst);
 		short secondOperand = getOperand(srcaddr, src);
 
+		if (!checkCondition(condition)) {
+
+			if (opcode == PUSH || opcode == CALL) {
+				if (hasPom(srcaddr, src))
+					regs[PC] += 2;
+			}
+			else if (opcode == POP) {
+				if (hasPom(dstaddr, dst))
+					regs[PC] += 2;
+			}
+			else if (hasPom(dstaddr, dst) || hasPom(srcaddr, src))
+				regs[PC] += 2;
+
+			continue;
+		}
+
 		switch (opcode) {
 
 			case ADD:
-				cout << "ADD" << endl;
+				if (dstaddr == 1 && dst == 7)
+					cout << "PSEUDO JUMP" << endl;
+				else
+					cout << "ADD" << endl;
 				setOperand(dstaddr, dst, firstOperand + secondOperand);
+				updateAllFlagsAdd(firstOperand, secondOperand, firstOperand + secondOperand);
 				break;
 			case SUB:
 				cout << "SUB" << endl;
 				setOperand(dstaddr, dst, firstOperand - secondOperand);
+				updateAllFlagsSub(firstOperand, secondOperand, firstOperand - secondOperand);
 				break;
 			case MUL:
 				cout << "MUL" << endl;
 				setOperand(dstaddr, dst, firstOperand * secondOperand);
+				updateZNFlags(firstOperand*secondOperand);
 				break;
 			case DIV:
 				cout << "DIV" << endl;
 				setOperand(dstaddr, dst, firstOperand / secondOperand);
+				updateZNFlags(firstOperand/secondOperand);
 				break;
 			case CMP:
 				cout << "CMP" << endl;
-				updateFlags(firstOperand - secondOperand);
+				updateAllFlagsSub(firstOperand, secondOperand, firstOperand - secondOperand);
 				break;
 			case AND:
 				cout << "AND" << endl;
 				setOperand(dstaddr, dst, firstOperand & secondOperand);
+				updateZNFlags(firstOperand&secondOperand);
 				break;
 			case OR:
 				cout << "OR" << endl;
 				setOperand(dstaddr, dst, firstOperand | secondOperand);
+				updateZNFlags(firstOperand|secondOperand);
 				break;
 			case NOT:
 				cout << "NOT" << endl;
 				setOperand(dstaddr, dst, ~secondOperand);
+				updateZNFlags(~secondOperand);
 				break;
 			case TEST:
 				cout << "TEST" << endl;
-				updateFlags(firstOperand & secondOperand);
+				updateZNFlags(firstOperand & secondOperand);
 				break;
 			case PUSH:
 				cout << "PUSH" << endl;
@@ -131,22 +159,26 @@ void Emulator::startMainLoop()
 				regs[SP] += 2;
 				break;
 			case MOV:
-				cout << "MOV" << endl;
-				//	Check for HALT
 				if ((dstaddr == srcaddr) && (srcaddr == REGDIR) && (dst == src) && (src == PC)) {
 				cout << "HALT" << endl;
 					end = true;
 					continue;
-				}
+				}else if (dstaddr == REGDIR && dst == PC)
+					cout << "PSEUDO JUMP" << endl;
+				else
+					cout << "MOV" << endl;
 				setOperand(dstaddr, dst, secondOperand);
+				updateZNFlags(secondOperand);
 				break;
 			case SHL:
 				cout << "SHL" << endl;
 				setOperand(dstaddr, dst, firstOperand << secondOperand);
+				updateZNCFlags(firstOperand, secondOperand, firstOperand << secondOperand, false);
 				break;
 			case SHR:
 				cout << "SHR" << endl;
 				setOperand(dstaddr, dst, firstOperand >> secondOperand);
+				updateZNCFlags(firstOperand, secondOperand, firstOperand >> secondOperand, true);
 				break;
 		}
 		if (opcode == PUSH || opcode == CALL) {
@@ -261,10 +293,206 @@ void Emulator::setOperand(int addressing, int dst, short value)
 			writeShort(getPom_NoChange() + regs[dst], value);
 			break;
 	}
-	updateFlags(value);
 }
 
-void Emulator::updateFlags(short value)
+void Emulator::updateAllFlagsSub(short firstOperand, short secondOperand, short value)
 {
-	//cout << endl << "Flags updating not implemented" << endl << flush;
+	//	Update flags
+	if (firstOperand - secondOperand == 0)
+		setZ(1);
+	else {
+		setZ(0);
+		if (firstOperand - secondOperand < 0)
+			setN(1);
+		else
+			setN(0);
+	}
+	if ((firstOperand == -2 && secondOperand == 32767) || (firstOperand == 32767 && secondOperand == -1)) {
+		setO(1);
+	}
+	else {
+		setO(0);
+	}
+
+	if ((firstOperand == 32766 && secondOperand == -1) || (firstOperand == -2 && secondOperand == -1) || (firstOperand == 32767 && secondOperand == -1)) {
+		setC(1);
+	}
+	else {
+		setC(0);
+	}
+}
+
+void Emulator::updateZNFlags(short value)
+{
+	//	Update flags
+	if (value == 0)
+		setZ(1);
+	else {
+		setZ(0);
+		if (value < 0)
+			setN(1);
+		else
+			setN(0);
+	}
+}
+
+void Emulator::updateZNCFlags(short firstOperand, short secondOperand, short value, bool right)
+{
+	//	Update flags
+	if (value == 0)
+		setZ(1);
+	else {
+		setZ(0);
+		if (value < 0)
+			setN(1);
+		else
+			setN(0);
+	}
+	int _firstOperand = firstOperand;
+	int _secondOperand = secondOperand;
+	//	Left shift
+	if(!right){
+		unsigned short mask = (1 << 15);
+		for(int i=0; i<_secondOperand; i++){
+			if (((unsigned short)(_firstOperand & mask) > 0) ) {
+				setC(1);
+			}
+			else {
+				setC(0);
+			}
+			_firstOperand <<= 1;
+		}
+	}
+	//	Right shift
+	else {
+		unsigned short mask = 1;
+		for (int i = 0; i<_secondOperand; i++) {
+			if (((unsigned short)(_firstOperand & mask) > 0)) {
+				setC(1);
+			}
+			else {
+				setC(0);
+			}
+			_firstOperand >>= 1;
+		}
+	}
+}
+
+void Emulator::updateAllFlagsAdd(short firstOperand, short secondOperand, short value)
+{
+	//	Update flags
+	if (firstOperand + secondOperand == 0)
+		setZ(1);
+	else {
+		setZ(0);
+		if (firstOperand + secondOperand < 0)
+			setN(1);
+		else
+			setN(0);
+	}
+
+	if ((firstOperand == -1 && secondOperand == -32768) || (firstOperand == -32768 && secondOperand == -32768) || (firstOperand == 32767 && secondOperand == 32767)) {
+		setO(1);
+	}
+	else {
+		setO(0);
+	}
+
+	if ((firstOperand == -1 && secondOperand == 32767) || (firstOperand == -1 && secondOperand == 1) || (firstOperand == -1 && secondOperand == -1) || (firstOperand == -1 && secondOperand == 32767) || (firstOperand == -32768 && secondOperand == -32768)) {
+		setC(1);
+	}
+	else {
+		setC(0);
+	}
+
+}
+
+void Emulator::setZ(unsigned short i)
+{
+	//	Clear bit
+	psw = psw & (~1);
+	//	Set bit
+	psw |= i;
+}
+
+void Emulator::setO(unsigned short i)
+{
+	//	Clear bit
+	psw = psw & (~2);
+	//	Set bit
+	psw |= (i<<1);
+}
+
+void Emulator::setC(unsigned short i)
+{
+	//	Clear bit
+	psw = psw & (~4);
+	//	Set bit
+	psw |= (i<<2);
+}
+
+void Emulator::setN(unsigned short i)
+{
+	//	Clear bit
+	psw = psw & (~8);
+	//	Set bit
+	psw |= (i<<3);
+}
+
+void Emulator::setI(unsigned short i)
+{
+	//	Clear bit
+	psw = psw & (~(1<<15));
+	//	Set bit
+	psw |= (i<<15);
+}
+
+unsigned short Emulator::getZ()
+{
+	return psw & 1;
+}
+
+unsigned short Emulator::getO()
+{
+	return psw & 2;
+}
+
+unsigned short Emulator::getC()
+{
+	return psw & 4;
+}
+
+unsigned short Emulator::getN()
+{
+	return psw & 8;
+}
+
+unsigned short Emulator::getI()
+{
+	return psw & (1<<15);
+}
+
+bool Emulator::checkCondition(int condition)
+{
+	if (condition == EQ) {
+		if (getZ())
+			return true;
+		else
+			return false;
+	}
+	else if (condition == NE) {
+		if (getN())
+			return true;
+		else
+			return false;
+	}
+	else if (condition == GT) {
+		if ((!getN()) && (!getZ()))
+			return true;
+		else
+			return false;
+	}
+	else if (condition == AL) {
+		return true;
+	}
 }
