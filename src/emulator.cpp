@@ -26,6 +26,8 @@ Emulator::Emulator(int argc, char** argv)
 	ivt_entry_6 = &(memory[12]);
 	ivt_entry_7 = &(memory[14]);
 
+	per_out = &memory[0xfffe];
+	per_in = &memory[0xfffc];
 
 	setTextSectionLimits();
 
