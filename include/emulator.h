@@ -59,7 +59,7 @@ private:
 	short getPom_NoChange();
 	bool hasPom(int,int);
 	short getShort(short address);
-	void writeShort(short address, short value);
+	void writeShort(unsigned short address, short value);
 
 	void setOperand(int addressing, int dst, short value);
 	void updateFlags(short value);

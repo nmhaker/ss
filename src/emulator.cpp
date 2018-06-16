@@ -20,14 +20,17 @@ Emulator::Emulator(int argc, char** argv)
 
 Emulator::~Emulator()
 {
-	if (linker != 0)
-		delete linker;
 	if (memory != 0)
 		delete memory;
+	if (linker != 0)
+		delete linker;
 }
 
 void Emulator::startMainLoop()
 {
+
+	cout << endl << "EXECUTING PROGRAM..." << endl << flush;
+
 	//	Entry point into program
 	regs[PC] = startAddress;
 
@@ -50,37 +53,48 @@ void Emulator::startMainLoop()
 		switch (opcode) {
 
 			case ADD:
+				cout << "ADD" << endl;
 				setOperand(dstaddr, dst, firstOperand + secondOperand);
 				break;
 			case SUB:
+				cout << "SUB" << endl;
 				setOperand(dstaddr, dst, firstOperand - secondOperand);
 				break;
 			case MUL:
+				cout << "MUL" << endl;
 				setOperand(dstaddr, dst, firstOperand * secondOperand);
 				break;
 			case DIV:
+				cout << "DIV" << endl;
 				setOperand(dstaddr, dst, firstOperand / secondOperand);
 				break;
 			case CMP:
+				cout << "CMP" << endl;
 				updateFlags(firstOperand - secondOperand);
 				break;
 			case AND:
+				cout << "AND" << endl;
 				setOperand(dstaddr, dst, firstOperand & secondOperand);
 				break;
 			case OR:
+				cout << "OR" << endl;
 				setOperand(dstaddr, dst, firstOperand | secondOperand);
 				break;
 			case NOT:
+				cout << "NOT" << endl;
 				setOperand(dstaddr, dst, ~secondOperand);
 				break;
 			case TEST:
+				cout << "TEST" << endl;
 				updateFlags(firstOperand & secondOperand);
 				break;
 			case PUSH:
+				cout << "PUSH" << endl;
 				regs[SP] -= 2;
 				writeShort(regs[SP], secondOperand);
 				break;
 			case POP:
+				cout << "POP" << endl;
 				switch (dstaddr) {
 				case IMMED:
 					if (dst == PSW) {
@@ -104,28 +118,34 @@ void Emulator::startMainLoop()
 				}
 				break;
 			case CALL:
+				cout << "CALL" << endl;
 				regs[SP] -= 2;
 				writeShort(regs[SP], regs[PC]);
 				regs[PC] = secondOperand;
 				break;
 			case IRET:
+				cout << "IRET" << endl;
 				psw = getShort(regs[SP]);
 				regs[SP] += 2;
 				regs[PC] = getShort(regs[SP]);
 				regs[SP] += 2;
 				break;
 			case MOV:
+				cout << "MOV" << endl;
 				//	Check for HALT
 				if ((dstaddr == srcaddr) && (srcaddr == REGDIR) && (dst == src) && (src == PC)) {
+				cout << "HALT" << endl;
 					end = true;
 					continue;
 				}
 				setOperand(dstaddr, dst, secondOperand);
 				break;
 			case SHL:
+				cout << "SHL" << endl;
 				setOperand(dstaddr, dst, firstOperand << secondOperand);
 				break;
 			case SHR:
+				cout << "SHR" << endl;
 				setOperand(dstaddr, dst, firstOperand >> secondOperand);
 				break;
 		}
@@ -210,8 +230,12 @@ short Emulator::getShort(short address)
 	return coded_value;
 }
 
-void Emulator::writeShort(short address, short value)
+void Emulator::writeShort(unsigned short address, short value)
 {
+	if (address < 0 || address >= (1 << 16)) {
+		cout << "Emulator error: out of Virtual Address space write requested" << endl;
+		exit(1);
+	}
 	char firstByte = value & 0xff;
 	char secondByte = ((value & (0xff << 8)) >> 8);
 
@@ -238,5 +262,5 @@ void Emulator::setOperand(int addressing, int dst, short value)
 
 void Emulator::updateFlags(short value)
 {
-	cout << endl << "Flags updating not implemented" << endl << flush;
+	//cout << endl << "Flags updating not implemented" << endl << flush;
 }
