@@ -162,7 +162,10 @@ void Emulator::startMainLoop()
 			case CALL:
 				cout << "CALL" << endl;
 				regs[SP] -= 2;
-				writeShort(regs[SP], regs[PC]);
+				if (hasPom(srcaddr, src))
+					writeShort(regs[SP], regs[PC] + 2);
+				else
+					writeShort(regs[SP], regs[PC]);
 				regs[PC] = secondOperand;
 				continue;
 			case IRET:

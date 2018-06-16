@@ -1257,6 +1257,10 @@ bool Assembler::secondPass(int line) {
 				
 				//	Skip to next token
 				it++;
+
+				tmp_addressing = 0;
+				tmp_src_dst = 0;
+
 			}
 
 			char firstByte = makeFirstByte(condition_opcode, instruction_opcode, dst_addressing);
