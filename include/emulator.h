@@ -58,7 +58,7 @@ private:
 	short getOperand(int&, int&);
 	short getPom_NoChange();
 	bool hasPom(int,int);
-	short getShort(short address);
+	short getShort(unsigned short address);
 	void writeShort(unsigned short address, short value);
 
 	void setOperand(int addressing, int dst, short value);

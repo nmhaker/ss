@@ -122,7 +122,7 @@ void Emulator::startMainLoop()
 				regs[SP] -= 2;
 				writeShort(regs[SP], regs[PC]);
 				regs[PC] = secondOperand;
-				break;
+				continue;
 			case IRET:
 				cout << "IRET" << endl;
 				psw = getShort(regs[SP]);
@@ -218,7 +218,7 @@ bool Emulator::hasPom(int addressing, int dst)
 		return false;
 }
 
-short Emulator::getShort(short address)
+short Emulator::getShort(unsigned short address)
 {
 	char firstByte = memory[address];
 	char secondByte = memory[address+1];
@@ -249,13 +249,17 @@ void Emulator::setOperand(int addressing, int dst, short value)
 		case IMMED:
 			if (dst == PSW)
 				psw = value;
+			break;
 			//else{}  Forbidden putting in immed in syntax parsing
 		case REGDIR:
 			regs[dst] = value;
+			break;
 		case MEMDIR:
 			writeShort(getPom_NoChange(), value);
+			break;
 		case REGINDPOM:
 			writeShort(getPom_NoChange() + regs[dst], value);
+			break;
 	}
 	updateFlags(value);
 }

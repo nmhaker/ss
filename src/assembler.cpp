@@ -1060,6 +1060,9 @@ bool Assembler::secondPass(int line) {
 					instruction_opcode = 13; //	MOV
 				}
 
+				dst_addressing = 1; // Always put in pc , that is reg 7
+				dst = 7;
+
 				jmp_instruction = true;
 			} 
 			else if (*it == "ret") {
@@ -1166,7 +1169,7 @@ bool Assembler::secondPass(int line) {
 
 					it++;
 
-					if (instruction_opcode == 11) { //	Need to set immed for CALL instruction, otherwise, doesnt jump on label but on value that label points to
+					if (instruction_opcode == 11 ) { //	Need to set immed for CALL instruction, otherwise, doesnt jump on label but on value that label points to
 						tmp_addressing = 0;
 					}else
 						tmp_addressing = 2;
@@ -1197,6 +1200,7 @@ bool Assembler::secondPass(int line) {
 					it++;
 					mem_operand = *it;
 				
+
 					if (!jmp_instruction) {
 						tmp_addressing = 3;
 						tmp_src_dst = 7;
@@ -1223,23 +1227,29 @@ bool Assembler::secondPass(int line) {
 					return false;
 				}
 
-				//	Update operands
-				if (parsed_operands == 0) {
-					dst_addressing = tmp_addressing;
-					dst = tmp_src_dst;
+				if (jmp_instruction) {
+					src_addressing = tmp_addressing;
+					src = tmp_src_dst;
 				}
 				else {
-					src_addressing = tmp_addressing;
-					src = tmp_src_dst;
-				}
+					//	Update operands
+					if (parsed_operands == 0) {
+						dst_addressing = tmp_addressing;
+						dst = tmp_src_dst;
+					}
+					else {
+						src_addressing = tmp_addressing;
+						src = tmp_src_dst;
+					}
 
-				//	CALL and PUSH use src operand
-				if (ParseTree::getInstructionField(instruction, "INSTRUCTION") == "push" || ParseTree::getInstructionField(instruction, "INSTRUCTION") == "call" ) {
-					dst_addressing = 0;
-					dst = 0;
+					//	CALL and PUSH use src operand
+					if (ParseTree::getInstructionField(instruction, "INSTRUCTION") == "push" || ParseTree::getInstructionField(instruction, "INSTRUCTION") == "call") {
+						dst_addressing = 0;
+						dst = 0;
 
-					src_addressing = tmp_addressing;
-					src = tmp_src_dst;
+						src_addressing = tmp_addressing;
+						src = tmp_src_dst;
+					}
 				}
 
 				//	Increment operands parsed
