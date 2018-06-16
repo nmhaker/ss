@@ -351,7 +351,7 @@ void Assembler::dumpSectionBytes(char * section, int size, int startingPosition)
 	}
 	else {
 		if (section != 0 && size > 0) {
-			for (int i = startingPosition; i < size+startingPosition; i++) {
+			for (int i = startingPosition; i < size; i++) {
 				printByteToHex(section[i]);
 				cout << " " << flush;
 			}
@@ -1061,11 +1061,18 @@ bool Assembler::secondPass(int line) {
 				}
 
 				jmp_instruction = true;
-			}
+			} 
 			else if (*it == "ret") {
 				instruction_opcode = 10;
 				dst_addressing = 1;
 				dst = 7;
+			} 
+			else if (*it == "halt") {	//	mov pc, pc is equal to HALT
+				instruction_opcode = 13;
+				dst_addressing = 1;
+				dst = 7;
+				src_addressing = 1;
+				src = 7;
 			}else {
 				cout << "Error: unknown instruction, at line: " << line << endl << flush;
 				return false;

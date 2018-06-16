@@ -64,7 +64,7 @@ private:
 	void setOperand(int addressing, int dst, short value);
 	void updateFlags(short value);
 
-	short* regs;
+	int* regs;
 	short psw;
 };
 

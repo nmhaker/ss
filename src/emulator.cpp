@@ -11,7 +11,9 @@ Emulator::Emulator(int argc, char** argv)
 	memory = linker->makeExecutable();
 	startAddress = linker->getStartLocation();
 
-	regs = new short[8]{ 0 };
+	regs = new int[8]{ 0 };
+	
+	regs[SP] = 0xff80;
 
 	startMainLoop();
 }
@@ -29,7 +31,9 @@ void Emulator::startMainLoop()
 	//	Entry point into program
 	regs[PC] = startAddress;
 
-	while (1) {
+	bool end = false;
+
+	while (!end) {
 
 		int condition = 0;
 		int opcode = 0;
@@ -111,6 +115,11 @@ void Emulator::startMainLoop()
 				regs[SP] += 2;
 				break;
 			case MOV:
+				//	Check for HALT
+				if ((dstaddr == srcaddr) && (srcaddr == REGDIR) && (dst == src) && (src == PC)) {
+					end = true;
+					continue;
+				}
 				setOperand(dstaddr, dst, secondOperand);
 				break;
 			case SHL:

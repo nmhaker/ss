@@ -265,8 +265,8 @@ bool Linker::relocateEntries()
 					return false;
 				}
 
-				first_byte = coded_value & 255;
-				second_byte = ((coded_value & (255 << 8)) >> 8);
+				first_byte = value & 255;
+				second_byte = ((value & (255 << 8)) >> 8);
 
 				bytes[offset] = first_byte;
 				bytes[offset + 1] = second_byte;
@@ -317,8 +317,8 @@ bool Linker::relocateEntries()
 					return false;
 				}
 
-				first_byte = coded_value & 255;
-				second_byte = ((coded_value & (255 << 8)) >> 8);
+				first_byte = value & 255;
+				second_byte = ((value & (255 << 8)) >> 8);
 
 				bytes[offset] = first_byte;
 				bytes[offset + 1] = second_byte;

@@ -242,6 +242,15 @@ void ParseTree::populateTree() {
 	tn_r->addChild(tn_ret_e)->addChild(tn_r0_0)->addChild(tn_r1_1)->addChild(tn_r2_2)->addChild(tn_r3_3)->addChild(tn_r4_4)->addChild(tn_r5_5)->addChild(tn_r6_6)->addChild(tn_r7_7);
 	tn_ret_e->addChild(tn_ret_t);	
 	this->addChild(tn_r);
+
+	TreeNode* tn_h = new TreeNode('h', Symbol);
+	TreeNode* tn_halt_a = new TreeNode('a', Symbol);
+	TreeNode* tn_halt_l = new TreeNode('l', Symbol);
+	TreeNode* tn_halt_t = new TreeNode('t', Instruction, "halt");
+	tn_h->addChild(tn_halt_a);
+	tn_halt_a->addChild(tn_halt_l);
+	tn_halt_l->addChild(tn_halt_t);
+	this->addChild(tn_h);
 	
 	TreeNode* tn_j = new TreeNode('j', Symbol);
 	TreeNode* tn_jump_m = new TreeNode('m', Symbol);
@@ -271,6 +280,7 @@ void ParseTree::populateTree() {
 //	this->addChild(tn_0);
 	
 	//Num of operands expected for instructions 
+	this->addReqOp("halt", 0);
 	this->addReqOp("iret", 0);
 	this->addReqOp("ret", 0);
 	this->addReqOp(".text", 0);
