@@ -94,6 +94,19 @@ private:
 
 	std::map<int, Limit> textSectionLimits;
 	void setTextSectionLimits();
+
+	char* ivt_entry_0;	//	Start interrupt routine
+	char* ivt_entry_1;	//	1 second interrupt routine
+	char* ivt_entry_2;	//	incorrect instruction interrupt routine
+	char* ivt_entry_3;	//	key pressed interupt routine
+	char* ivt_entry_4;
+	char* ivt_entry_5;
+	char* ivt_entry_6;
+	char* ivt_entry_7;
+
+	char *per_out;
+	char *per_in;
+
 };
 
 #endif

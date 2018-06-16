@@ -139,19 +139,33 @@ ObjectFile * Serializer::makeObjectFile()
 	objFile->setHeader(flags);
 
 	objFile->setSymTable(toSymTable());
-	objFile->setRetData(toRelTable());
-	objFile->setRetRoData(toRelTable());
-	objFile->setRetText(toRelTable());
 
-	char*data = toRawData();
+	if(flags->has_data_ret)
+		objFile->setRetData(toRelTable());
+	if(flags->has_rodata_ret)
+		objFile->setRetRoData(toRelTable());
+	if(flags->has_text_ret)
+		objFile->setRetText(toRelTable());
 
-	objFile->setBytesData(data, lastRawSize);
-	data = toRawData();
-	objFile->setBytesRoData(data, lastRawSize);
-	data = toRawData();
-	objFile->setBytesText(data, lastRawSize);
-	data = toRawData();
-	objFile->setBytesBss(data, lastRawSize);
+	if (flags->has_raw_data) {
+		char*data = toRawData();
+		objFile->setBytesData(data, lastRawSize);
+	}
+
+	if (flags->has_raw_rodata) {
+		char* data = toRawData();
+		objFile->setBytesRoData(data, lastRawSize);
+	}
+
+	if (flags->has_raw_text) {
+		char* data = toRawData();
+		objFile->setBytesText(data, lastRawSize);
+	}
+
+	if (flags->has_raw_bss) {
+		char* data = toRawData();
+		objFile->setBytesBss(data, lastRawSize);
+	}
 
 	return objFile;
 }

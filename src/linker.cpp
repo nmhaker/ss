@@ -23,7 +23,8 @@ Linker::Linker(int num, char** files)
 		delete s;
 	}
 
-	resolve();
+	if (!resolve())
+		exit(1);
 }
 
 

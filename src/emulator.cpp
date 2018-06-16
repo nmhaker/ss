@@ -17,6 +17,16 @@ Emulator::Emulator(int argc, char** argv)
 
 	psw = 1;
 
+	ivt_entry_0 = memory;
+	ivt_entry_1 = &(memory[2]);
+	ivt_entry_2 = &(memory[4]);
+	ivt_entry_3 = &(memory[6]);
+	ivt_entry_4 = &(memory[8]);
+	ivt_entry_5 = &(memory[10]);
+	ivt_entry_6 = &(memory[12]);
+	ivt_entry_7 = &(memory[14]);
+
+
 	setTextSectionLimits();
 
 	startMainLoop();
