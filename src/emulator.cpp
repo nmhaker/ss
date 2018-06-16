@@ -17,6 +17,8 @@ Emulator::Emulator(int argc, char** argv)
 
 	psw = 1;
 
+	setTextSectionLimits();
+
 	startMainLoop();
 }
 
@@ -265,7 +267,11 @@ short Emulator::getShort(unsigned short address)
 void Emulator::writeShort(unsigned short address, short value)
 {
 	if (address < 0 || address >= (1 << 16)) {
-		cout << "Emulator error: out of Virtual Address space write requested" << endl;
+		cout << "Emulator error: out of Virtual Address space write requested" << endl << flush;
+		exit(1);
+	}
+	if (checkInTextSection(address)) {
+		cout << "Emulator error: segmentation fault, requested to write into text section" << endl << flush;
 		exit(1);
 	}
 	char firstByte = value & 0xff;
@@ -495,4 +501,73 @@ bool Emulator::checkCondition(int condition)
 	else if (condition == AL) {
 		return true;
 	}
+	else {
+		cout << "Emulator error: unrecognized condition" << endl << flush;
+		exit(1);
+	}
+}
+
+bool Emulator::checkInTextSection(unsigned short address)
+{
+	for (map<int, Limit>::iterator it = textSectionLimits.begin(); it != textSectionLimits.end(); it++) {
+		if ((address >= it->second.startAddress) && (address < (it->second.startAddress + it->second.size ) ) )
+			return true;
+	}
+	return false;
+}
+
+void Emulator::setTextSectionLimits()
+{
+
+	int numFiles = linker->getNumFiles();
+	ObjectFile** files = linker->getObjectFiles();
+
+	for (int i = 0; i < numFiles; i++) {
+
+		ObjectFile* file = files[i];
+		map<int, SymEntry*> entries = file->getSymTable()->get_entries();
+
+		int	offset = file->getHeader()->startAddress;
+
+		int counter = 1;
+
+		try {
+			while (entries.at(counter)->getName() == entries.at(counter)->getSection()) {
+
+				if (entries.at(counter)->getName() == ".text") {
+
+					Limit l;
+					l.startAddress = offset;
+					l.size = files[i]->getTextSize();
+
+					textSectionLimits.insert(pair<int, Limit>(l.startAddress, l));
+
+				}
+
+				int size = 0;
+
+				if (entries.at(counter)->getName() == ".rodata") {
+					size = file->getRodataSize();
+				}
+				else if (entries.at(counter)->getName() == ".data") {
+					size = file->getDataSize();
+				}
+				else if (entries.at(counter)->getName() == ".bss") {
+					size = file->getBssSize();
+				}
+				else if (entries.at(counter)->getName() == ".text") {
+					size = file->getTextSize();
+				}
+				offset += size;
+				counter++;
+			}
+		}
+		catch (out_of_range e) {}
+	}
+
+	cout << endl << "EMULATOR TEXT SECTIONS" << endl << flush;
+	for (map<int, Limit>::iterator it = textSectionLimits.begin(); it != textSectionLimits.end(); it++) {
+		cout << "Text section starts at: " << it->second.startAddress << " , size: " << it->second.size << " ,end address is: " << it->second.startAddress + it->second.size << endl << flush;
+	} 
+
 }

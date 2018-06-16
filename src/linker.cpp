@@ -392,3 +392,13 @@ int Linker::getStartLocation()
 {
 	return this->START;
 }
+
+ObjectFile ** Linker::getObjectFiles()
+{
+	return this->objectFile;
+}
+
+int Linker::getNumFiles()
+{
+	return this->numOfObjectFiles;
+}

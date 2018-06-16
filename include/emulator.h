@@ -40,6 +40,11 @@ enum Instructions {
 	SHR
 };
 
+struct Limit {
+	int startAddress;
+	int size;
+};
+
 class Emulator {
 public:
 
@@ -84,6 +89,11 @@ private:
 	unsigned short getI();
 
 	bool checkCondition(int condition);
+
+	bool checkInTextSection(unsigned short address);
+
+	std::map<int, Limit> textSectionLimits;
+	void setTextSectionLimits();
 };
 
 #endif

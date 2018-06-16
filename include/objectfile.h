@@ -37,6 +37,11 @@ public:
 	int getRodataSize();
 	int getBssSize();
 
+	int getTextStartPosition();
+	int getDataStartPosition();
+	int getRodataStartPosition();
+	int getBssStartPosition();
+
 	int getFileSize();
 
 private:

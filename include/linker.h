@@ -13,6 +13,9 @@ public:
 	char* makeExecutable();
 	int getStartLocation();
 
+	ObjectFile** getObjectFiles();
+	int getNumFiles();
+
 private:
 
 	bool resolve();

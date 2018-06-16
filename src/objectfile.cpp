@@ -155,6 +155,26 @@ int ObjectFile::getBssSize()
 	return this->size_of_bss;
 }
 
+int ObjectFile::getTextStartPosition()
+{
+	return 0;
+}
+
+int ObjectFile::getDataStartPosition()
+{
+	return 0;
+}
+
+int ObjectFile::getRodataStartPosition()
+{
+	return 0;
+}
+
+int ObjectFile::getBssStartPosition()
+{
+	return 0;
+}
+
 int ObjectFile::getFileSize()
 {
 	return size_of_text + size_of_data + size_of_rodata + size_of_bss;
