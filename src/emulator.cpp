@@ -1,8 +1,62 @@
-#include "..\include\emulator.h"
+#include "../include/emulator.h"
 
 #include <iostream>
+#include <thread>
+#include <chrono>
+#include <atomic>
+
+#include <stdio.h>
+#include <sys/select.h>
+#include <termios.h>
+#include <stropts.h>
+#include <sys/ioctl.h>
+
+#include <unistd.h>
+
+#include <list>
 
 using namespace std;
+
+int _kbhit() {
+	static const int STDIN = 0;
+	static bool initialized = false;
+
+	if (! initialized) {
+		// Use termios to turn off line buffering
+		termios term;
+		tcgetattr(STDIN, &term);
+		term.c_lflag &= ~ICANON;
+		tcsetattr(STDIN, TCSANOW, &term);
+		termios newterm = term;
+		newterm.c_lflag &= ~ECHO;
+		tcsetattr(STDIN, TCSANOW, &newterm);
+		setbuf(stdin, NULL);
+		initialized = true;
+	}
+
+	int bytesWaiting;
+	ioctl(STDIN, FIONREAD, &bytesWaiting);
+	return bytesWaiting;
+}
+
+void foo_timer_at_1(list<int>* interrupts){
+	while(1){
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+		interrupts->push_back(TIMER);
+	}
+}
+
+void foo_key_listener(char* dst, list<int>* interrupts){
+	while(1){
+		while (! _kbhit()) { } 
+
+		char c = getchar();
+		*dst = c;
+
+		interrupts->push_back(KEY_PRESS);
+	}
+}
 
 Emulator::Emulator(int argc, char** argv)
 {
@@ -16,6 +70,8 @@ Emulator::Emulator(int argc, char** argv)
 	regs[SP] = 0xff80;
 
 	psw = 1;
+	psw |= (1 << 12);
+	setI(1);
 
 	ivt_entry_0 = memory;
 	ivt_entry_1 = &(memory[2]);
@@ -29,17 +85,32 @@ Emulator::Emulator(int argc, char** argv)
 	per_out = &memory[0xfffe];
 	per_in = &memory[0xfffc];
 
+	end = false;
+
 	setTextSectionLimits();
+
+	timer_at_1_second = new thread(foo_timer_at_1, &interrupts);
+	key_press_listener = new thread(foo_key_listener, per_in, &interrupts);
 
 	startMainLoop();
 }
 
 Emulator::~Emulator()
 {
-	if (memory != 0)
-		delete memory;
 	if (linker != 0)
 		delete linker;
+	if (memory != 0)
+		delete memory;
+	if (timer_at_1_second != 0){
+		cout << endl << "Waiting for timer thread to finish" << endl << flush;
+		timer_at_1_second->join();
+		delete timer_at_1_second;
+	}
+	if (key_press_listener != 0){
+		cout << endl << "Waiting for listener thread to finish" << endl << flush;
+		key_press_listener->join();
+		delete key_press_listener;
+	}
 }
 
 void Emulator::startMainLoop()
@@ -50,9 +121,9 @@ void Emulator::startMainLoop()
 	//	Entry point into program
 	regs[PC] = startAddress;
 
-	bool end = false;
+	bool iret = false;
 
-	while (!end) {
+	while (!end && !iret) {
 
 		int condition = 0;
 		int opcode = 0;
@@ -85,58 +156,60 @@ void Emulator::startMainLoop()
 		switch (opcode) {
 
 			case ADD:
-				if (dstaddr == 1 && dst == 7)
-					cout << "PSEUDO JUMP" << endl;
-				else
-					cout << "ADD" << endl;
+				if (dstaddr == 1 && dst == 7){
+//					cout << "PSEUDO JUMP" << endl;
+				}
+				else{
+//					cout << "ADD" << endl;
+				}
 				setOperand(dstaddr, dst, firstOperand + secondOperand);
 				updateAllFlagsAdd(firstOperand, secondOperand, firstOperand + secondOperand);
 				break;
 			case SUB:
-				cout << "SUB" << endl;
+//				cout << "SUB" << endl;
 				setOperand(dstaddr, dst, firstOperand - secondOperand);
 				updateAllFlagsSub(firstOperand, secondOperand, firstOperand - secondOperand);
 				break;
 			case MUL:
-				cout << "MUL" << endl;
+//				cout << "MUL" << endl;
 				setOperand(dstaddr, dst, firstOperand * secondOperand);
 				updateZNFlags(firstOperand*secondOperand);
 				break;
 			case DIV:
-				cout << "DIV" << endl;
+//				cout << "DIV" << endl;
 				setOperand(dstaddr, dst, firstOperand / secondOperand);
 				updateZNFlags(firstOperand/secondOperand);
 				break;
 			case CMP:
-				cout << "CMP" << endl;
+//				cout << "CMP" << endl;
 				updateAllFlagsSub(firstOperand, secondOperand, firstOperand - secondOperand);
 				break;
 			case AND:
-				cout << "AND" << endl;
+//				cout << "AND" << endl;
 				setOperand(dstaddr, dst, firstOperand & secondOperand);
 				updateZNFlags(firstOperand&secondOperand);
 				break;
 			case OR:
-				cout << "OR" << endl;
+//				cout << "OR" << endl;
 				setOperand(dstaddr, dst, firstOperand | secondOperand);
 				updateZNFlags(firstOperand|secondOperand);
 				break;
 			case NOT:
-				cout << "NOT" << endl;
+//				cout << "NOT" << endl;
 				setOperand(dstaddr, dst, ~secondOperand);
 				updateZNFlags(~secondOperand);
 				break;
 			case TEST:
-				cout << "TEST" << endl;
+//				cout << "TEST" << endl;
 				updateZNFlags(firstOperand & secondOperand);
 				break;
 			case PUSH:
-				cout << "PUSH" << endl;
+//				cout << "PUSH" << endl;
 				regs[SP] -= 2;
 				writeShort(regs[SP], secondOperand);
 				break;
 			case POP:
-				cout << "POP" << endl;
+//				cout << "POP" << endl;
 				switch (dstaddr) {
 				case IMMED:
 					if (dst == PSW) {
@@ -160,7 +233,7 @@ void Emulator::startMainLoop()
 				}
 				break;
 			case CALL:
-				cout << "CALL" << endl;
+//				cout << "CALL" << endl;
 				regs[SP] -= 2;
 				if (hasPom(srcaddr, src))
 					writeShort(regs[SP], regs[PC] + 2);
@@ -169,31 +242,34 @@ void Emulator::startMainLoop()
 				regs[PC] = secondOperand;
 				continue;
 			case IRET:
-				cout << "IRET" << endl;
+//				cout << "IRET" << endl;
 				psw = getShort(regs[SP]);
 				regs[SP] += 2;
 				regs[PC] = getShort(regs[SP]);
 				regs[SP] += 2;
-				break;
+				iret = true;
+				continue;
 			case MOV:
 				if ((dstaddr == srcaddr) && (srcaddr == REGDIR) && (dst == src) && (src == PC)) {
-				cout << "HALT" << endl;
+//				cout << "HALT" << endl;
 					end = true;
 					continue;
-				}else if (dstaddr == REGDIR && dst == PC)
-					cout << "PSEUDO JUMP" << endl;
-				else
-					cout << "MOV" << endl;
+				}else if (dstaddr == REGDIR && dst == PC){
+//					cout << "PSEUDO JUMP" << endl;
+				}
+				else{
+//					cout << "MOV" << endl;
+				}
 				setOperand(dstaddr, dst, secondOperand);
 				updateZNFlags(secondOperand);
 				break;
 			case SHL:
-				cout << "SHL" << endl;
+//				cout << "SHL" << endl;
 				setOperand(dstaddr, dst, firstOperand << secondOperand);
 				updateZNCFlags(firstOperand, secondOperand, firstOperand << secondOperand, false);
 				break;
 			case SHR:
-				cout << "SHR" << endl;
+//				cout << "SHR" << endl;
 				setOperand(dstaddr, dst, firstOperand >> secondOperand);
 				updateZNCFlags(firstOperand, secondOperand, firstOperand >> secondOperand, true);
 				break;
@@ -207,6 +283,57 @@ void Emulator::startMainLoop()
 				regs[PC] += 2;
 		}else if (hasPom(dstaddr, dst) || hasPom(srcaddr, src))
 			regs[PC] += 2;
+		if(getI()){
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			checkForInterrupts();
+		}else{
+			//std::this_thread::sleep_for(std::chrono::milliseconds(200));	
+		}
+	}
+}
+
+void Emulator::checkForInterrupts(){
+
+
+	if(interrupts.size() > 0){
+
+		int inter = interrupts.front();
+		interrupts.pop_front();
+
+		if(!getI())
+			return;
+
+		cout << endl << "ENTERING INTERRUPT ROUTINE" << endl << flush;
+
+		if( inter == TIMER && getTimerBit()){
+			short address = 0;
+			address |= ivt_entry_1[0];
+			address |= (ivt_entry_1[1] << 8);
+			//cout << "OBRADJUJEM JEDAN PREKID TAJMERA" << endl;
+			startAddress = address;
+			setI(0);
+			regs[SP] -= 2;
+			writeShort(regs[SP], regs[PC]);
+			regs[SP] -= 2;
+			writeShort(regs[SP], psw);
+			startMainLoop();
+			setI(1);
+			//exit(1);
+		}else if( inter == KEY_PRESS ){
+			short address = 0;
+			address |= ivt_entry_3[0];
+			address |= (ivt_entry_3[1] << 8);
+			//cout << "OBRADJUJEM JEDAN PREKID TASTATURE" << endl;
+			startAddress = address;
+			setI(0);
+			regs[SP] -= 2;
+			writeShort(regs[SP], regs[PC]);
+			regs[SP] -= 2;
+			writeShort(regs[SP], psw);
+			startMainLoop();
+			setI(1);
+			//exit(1);
+		}
 	}
 }
 
@@ -270,11 +397,11 @@ bool Emulator::hasPom(int addressing, int dst)
 short Emulator::getShort(unsigned short address)
 {
 	char firstByte = memory[address];
-	char secondByte = memory[address+1];
+	short secondByte = memory[address+1];
 
 	short coded_value = 0;
-	coded_value |= firstByte;
-	coded_value |= (secondByte << 8);
+	coded_value = (coded_value | firstByte) & 0x00ff;
+	coded_value = (coded_value | ((secondByte << 8)&0xff00));
 
 	return coded_value;
 }
@@ -283,17 +410,43 @@ void Emulator::writeShort(unsigned short address, short value)
 {
 	if (address < 0 || address >= (1 << 16)) {
 		cout << "Emulator error: out of Virtual Address space write requested" << endl << flush;
-		exit(1);
+		short address = 0;
+		address |= ivt_entry_2[0];
+		address |= (ivt_entry_2[1] << 8);
+		startAddress = address;
+		startMainLoop();
+		//exit(1);
 	}
 	if (checkInTextSection(address)) {
 		cout << "Emulator error: segmentation fault, requested to write into text section" << endl << flush;
-		exit(1);
+		short address = 0;
+		address |= ivt_entry_2[0];
+		address |= (ivt_entry_2[1] << 8);
+		startAddress = address;
+		startMainLoop();
+		//exit(1);
 	}
-	char firstByte = value & 0xff;
-	char secondByte = ((value & (0xff << 8)) >> 8);
+	
+	if(address != 0xfffe){
 
-	memory[address] = firstByte;
-	memory[address + 1] = secondByte;
+		char firstByte = value & 0xff;
+		char secondByte = ((value & (0xff << 8)) >> 8);
+
+		memory[address] = firstByte;
+		memory[address + 1] = secondByte;
+
+	}else{
+
+		char firstByte = value & 0xff;
+
+		memory[address] = firstByte;
+
+		if(firstByte == 0x10)
+			cout << endl;
+		else
+			cout << firstByte << flush;
+	}
+
 }
 
 void Emulator::setOperand(int addressing, int dst, short value)
@@ -586,3 +739,8 @@ void Emulator::setTextSectionLimits()
 	} 
 
 }
+
+unsigned short Emulator::getTimerBit(){
+	return psw & (1 << 12);
+}
+

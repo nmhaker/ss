@@ -424,6 +424,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 						if (!checkAddressing(instruction, "MEMDIR")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 							return false;
 						}
 
@@ -463,6 +464,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 						if (!checkAddressing(instruction, "IMMEDIATE")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 							return false;
 						}
 
@@ -512,6 +514,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 	
 						if (!checkAddressing(instruction, "REFERENCE")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 							return false;
 						}
 
@@ -570,6 +573,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 						
 						if (!checkAddressing(instruction, "MEMDIRIMMED")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 							return false;
 						}
 
@@ -677,6 +681,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 									if (!checkAddressing(instruction, "REGINDPOM")) {
 										cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 										return false;
 									}
 
@@ -800,6 +805,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 									if (!checkAddressing(instruction, "MEMDIR")) {
 										cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 										return false;
 									}
 
@@ -845,6 +851,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 								if (!checkAddressing(instruction, "MEMDIR")) {
 									cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 									return false;
 								}
 
@@ -873,6 +880,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 							if (!checkAddressing(instruction, "MEMDIR")) {
 								cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 								return false;
 							}
 
@@ -902,6 +910,7 @@ bool ParseTree::parse(std::string line, int lineNumber) {
 
 						if (!checkAddressing(instruction, "PCRELPOM")) {
 							cout << "Error: too much memory references, at line: " << lineNumber << endl;
+							exit(1);
 							return false;
 						}
 

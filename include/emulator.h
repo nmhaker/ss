@@ -3,9 +3,14 @@
 
 #include "linker.h"
 
-#define PSW 7
-#define PC 7
-#define SP 6
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <list>
+
+const int PSW = 7;
+const int PC = 7;
+const int SP = 6;
 
 enum Addressing {
 	IMMED = 0,
@@ -40,10 +45,19 @@ enum Instructions {
 	SHR
 };
 
+enum Interrupts{
+	TIMER,
+	KEY_PRESS
+};
+
 struct Limit {
 	int startAddress;
 	int size;
 };
+
+void foo_timer_at_1(std::list<int>* interrupts);
+	;
+void foo_key_listener(char*, std::list<int>* interrupts);
 
 class Emulator {
 public:
@@ -52,6 +66,7 @@ public:
 	~Emulator();
 
 private:
+
 
 	Linker* linker;
 	char* memory;
@@ -88,6 +103,8 @@ private:
 	unsigned short getN();
 	unsigned short getI();
 
+	unsigned short getTimerBit();
+
 	bool checkCondition(int condition);
 
 	bool checkInTextSection(unsigned short address);
@@ -106,6 +123,15 @@ private:
 
 	char *per_out;
 	char *per_in;
+
+	std::thread* timer_at_1_second;
+	std::thread* key_press_listener;
+
+	std::list<int> interrupts;
+
+	void checkForInterrupts();
+
+	bool end;
 
 };
 
